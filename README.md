@@ -1,96 +1,98 @@
 # PackPal
 
-PackPal is an accessible, installable packing-checklist app. Each event has its
-own packing list, and repeat lists can be saved as reusable kits. Speech input
-uses the app's Gemini Live transcription service for item dictation and packing
-voice commands. The Talk to PackPal button records a request, sends the
-transcription to Gemini, and applies clear packing-list actions; transcripts
-are not shown in a separate transcript panel.
+PackPal is an accessible, installable packing-checklist PWA. Each event has
+its own packing list, and repeat lists can be saved as reusable kits. Checklist
+data is stored locally in the browser.
 
-## Run
+## Run locally
 
 Requires Node.js 20 or later and a Gemini API key.
 
 ```powershell
 npm install
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
-# Set GEMINI_API_KEY in .env.
+```
+
+Set `GEMINI_API_KEY` in `.env`, then start the production server:
+
+```powershell
 npm start
 ```
 
-Open `http://localhost:3000`. The app needs microphone access, a secure browser
-context (localhost is allowed), and an active connection to the speech backend
-for voice input. The Gemini API key stays on the server and must never be put
-in browser code.
+Open `http://localhost:3000`. To develop the frontend with Vite, run `npm start`
+in one terminal and `npm run dev` in another; Vite proxies speech and API
+requests to the backend on port 3000.
 
-For frontend development, run `npm start` in one terminal and `npm run dev` in
-another. Vite proxies `/speech-to-text` and `/api` requests to the server on
-port 3000.
+Keep the Gemini API key in `.env` on the server. Never put it in browser code
+or commit `.env`. Microphone access requires permission and a secure browser
+context; localhost is supported.
 
-## Browser and speech service
+## Voice input and assistant
 
-The finalized PackPal browser lives in `src/`. Its checklists, kits, and
-settings are saved in local storage and remain usable offline. The microphone
-controls send audio to the `/speech-to-text` WebSocket endpoint, where the
-server securely proxies it to Gemini's `gemini-3.5-transcribe-live` model.
-Finalized speech is used by the active dictation or packing command; the app
-does not display a separate transcript or record/play back audio.
+The browser uses the Gemini Live speech service for dictation and packing voice
+commands. The browser streams mono PCM16 audio at 16 kHz to the
+`/speech-to-text` WebSocket endpoint. The backend proxies it to Gemini and
+returns interim and finalized transcripts. The reusable browser client is in
+`src/speech-to-text-client.js`.
 
-The browser client converts microphone audio to mono PCM16 at 16 kHz and sends
-it to the backend. The backend emits `speech_to_text.interim_transcript` and
-`speech_to_text.transcript` events. The HTTP health endpoint is `GET /health`.
-
-The backend also includes authenticated reminder interpretation endpoints. To
-use those endpoints, configure `FIREBASE_PROJECT_ID` in `.env`, enable Google
-sign-in and Firestore in Firebase, and publish the included
-[Firestore security rules](./firestore.rules). The current PackPal browser
-stores its checklist data locally and does not expose those reminder endpoints.
-
-On an event page, **Talk to PackPal** records one conversation until you finish
-it. Gemini can mark existing items packed or unpacked, add an item to an
-existing category (such as Clothes or Documents), remove an existing item,
-create or delete a list, add an event-relative reminder, or update the current
-event's location or start time. Requested item/list actions are applied only
-when their category and item names match the current event; ambiguous or
-duplicate changes are skipped. The assistant speaks its reply when browser
-speech synthesis is available.
-Say **“I’m done”** to submit a voice request automatically. The end phrase is
-removed before the request is interpreted. Silence detection is disabled for
-this conversation flow because background noise made it unreliable; use
-**Submit now** as a manual fallback.
-
-### Voice assistant command examples
+On an event page, **Talk to PackPal** records a conversation until you say
+**“I’m done”** or press **Submit now**. Gemini can:
 
 | Say | Action |
 |---|---|
-| “Pack my passport. I’m done.” | Check off the matching existing item as packed. |
-| “Unpack the dress shoes. I’m done.” | Uncheck the matching item as unpacked. |
-| “Add a nationalization document to Documents. I’m done.” | Add an item to the existing Documents list. |
-| “Remove the reference letters from Documents. I’m done.” | Remove the matching item from Documents. |
-| “Create a new list called Toiletries. I’m done.” | Add an empty Toiletries list to the current event. |
-| “Delete the Toiletries list. I’m done.” | Delete that list and all its event items. |
-| “Remind me 3 hours and 20 minutes before the event. I’m done.” | Add a reminder 200 minutes before the event. |
-| “Remind me 2 weeks before the event. I’m done.” | Add a reminder 20,160 minutes before the event. |
-| “Remind me about this event. I’m done.” | Add the default reminder one day (1,440 minutes) before the event. |
-| “The location is the Boston Garden. I’m done.” | Set the current event location to Boston Garden. |
-| “The event starts at 7 PM on May 12. I’m done.” | Update the current event start date and time. |
+| “Pack my passport. I’m done.” | Mark a matching existing item packed. |
+| “Unpack the dress shoes. I’m done.” | Mark a matching item unpacked. |
+| “Add a document called nationalization. I’m done.” | Add an item to an existing list. |
+| “Remove the reference letter from Documents. I’m done.” | Remove a matching item. |
+| “Create a list called Toiletries. I’m done.” | Create a list for the current event. |
+| “Delete the Toiletries list. I’m done.” | Delete that event list and its items. |
+| “Remind me 3 hours before the event. I’m done.” | Add a reminder three hours before the event. |
+| “Set the event location to the student center. I’m done.” | Update the current event location. |
+| “Move the event to 3 PM tomorrow. I’m done.” | Update the current event start time. |
 
-Reminder offsets can be specified in minutes, hours, days, or weeks, including
-combinations such as “1 day and 3 hours.” They must fall after now and before
-the event start; if no offset is stated, the default is one day before. A
-reminder whose time has already passed, or a duplicate offset, is not added.
-Deleting a list removes its items from this event but does not delete a saved
-kit. Spoken location and time edits update the currently open event; they do
-not create a separate event.
+Item and list requests are matched against the current event. Unmatched or
+ambiguous requests are skipped rather than applied to an uncertain target.
+Singular/plural differences are supported when the match remains unambiguous.
+Reminder offsets can be given in minutes, hours, days, or weeks; the default is
+one day before the event. A reminder must be in the future and before the event
+starts. Silence submission is disabled for this assistant; use the explicit end
+phrase or manual submit button.
+
+## Development
+
+```powershell
+npm run dev       # Vite frontend at http://localhost:5173
+npm run build     # Production frontend in dist/
+npm test          # Build and run the test suite
+npm start         # Build and serve the app and backend at http://localhost:3000
+```
+
+## Firebase status
+
+Firebase client helper files and backend reminder interpretation support are
+present, but the current PackPal checklist UI stores its data locally and does
+not yet sync checklist data or saved reminders through Firebase. The Gemini
+speech and packing assistant work with `GEMINI_API_KEY`; Firebase is not needed
+for those features.
 
 ## Project layout
 
-- `src/components/` contains the browser's screens and controls.
-- `src/state/` contains the checklist state and local persistence.
-- `src/hooks/useDictation.js` connects microphone controls to speech-to-text.
-- `src/speech-to-text-client.js` and `public/audio-capture-worklet.js`
-  capture and stream microphone audio.
-- `server.js` serves the production build and handles speech and API requests.
+```text
+src/
+  components/           PackPal screens and controls
+  hooks/                Speech, dictation, and reminder hooks
+  state/                Checklist state, seed data, and selectors
+  styles/               Shared styles and design tokens
+  speech-to-text-client.js
+server.js                Express server and Gemini endpoints
+test/                    Server, speech, and packing assistant tests
+```
 
-Build the browser with `npm run build`, run tests with `npm test`, and serve a
-production build with `npm start`.
+## Accessibility and limitations
+
+- Colour-blind palette, text scaling, and reduced-motion settings
+- Text-to-speech for reading packing lists aloud
+- Keyboard-accessible controls, visible focus, and screen-reader announcements
+- Reminder notifications fire while the app is open; background delivery needs
+  a push service.
+- Browser audio processing varies by browser and device.
