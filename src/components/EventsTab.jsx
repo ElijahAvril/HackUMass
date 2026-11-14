@@ -14,9 +14,10 @@ import { Icon } from './Icon.jsx'
 import { useStore } from '../state/store.jsx'
 import {
   selectSortedEvents, selectProgress, selectNextEvent, eventTone,
-  formatEventTime, formatRelative,
+  formatEventTimeOf, formatRelativeOf,
 } from '../state/selectors.js'
 import { suggestKits } from '../state/suggestKits.js'
+import { TimeSelect, ALL_DAY } from './TimeSelect.jsx'
 import './Views.css'
 
 /** The add-an-event form. Collapsed by default to keep the list scannable. */
@@ -38,10 +39,13 @@ function EventForm({ onDone, initialDate = '' }) {
     if (!title.trim() || !date) return
     // Build a local-time ISO string. `new Date('2026-11-20T10:00')` without a
     // Z suffix is parsed in the user's own timezone, which is what we want.
-    const startsAt = new Date(`${date}T${time || '09:00'}`).toISOString()
+    // All-day events start at midnight and show "All day" instead of a time.
+    const allDay = time === ALL_DAY
+    const startsAt = new Date(`${date}T${allDay ? '00:00' : (time || '09:00')}`).toISOString()
     actions.addEvent({
       title: title.trim(),
       startsAt,
+      allDay,
       location: location.trim(),
       reminders: [
         { id: `rem_${Date.now()}_a`, offsetMinutes: 1440, fired: false },
@@ -71,8 +75,7 @@ function EventForm({ onDone, initialDate = '' }) {
         </label>
         <label className="field">
           <span>Time</span>
-          <input className="input" type="time" value={time}
-                 onChange={(e) => setTime(e.target.value)} />
+          <TimeSelect value={time} onChange={setTime} />
         </label>
       </div>
 
@@ -190,7 +193,7 @@ export function EventsTab() {
                   <div className="agrow__main">
                     <h3 className="agrow__title">{event.title}</h3>
                     <p className="agrow__meta">
-                      <span><Icon name="clock" size={15} /> {formatEventTime(event.startsAt)} · {formatRelative(event.startsAt)}</span>
+                      <span><Icon name="clock" size={15} /> {formatEventTimeOf(event)} · {formatRelativeOf(event)}</span>
                       {event.location ? <span><Icon name="pin" size={15} /> {event.location}</span> : null}
                     </p>
                     <p className="agrow__progress">
@@ -232,10 +235,10 @@ export function EventsTab() {
       {next ? (
         <aside className="card panel nextup" aria-labelledby="nextup-heading">
           <span className="tape tape--right" aria-hidden="true" />
-          <p className="eyebrow">Next up · {formatRelative(next.startsAt)}</p>
+          <p className="eyebrow">Next up · {formatRelativeOf(next)}</p>
           <h2 className="nextup__title" id="nextup-heading">{next.title}</h2>
           <p className="nextup__when">
-            {new Date(next.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatEventTime(next.startsAt)}
+            {new Date(next.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatEventTimeOf(next)}
           </p>
           <p className="progress__headline">
             <strong className="progress__big">{nextProgress.packed}</strong>

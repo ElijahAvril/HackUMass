@@ -15,7 +15,7 @@ import { PackingAssistantButton } from './PackingAssistantButton.jsx'
 import { useStore } from '../state/store.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import {
-  formatEventDate, formatEventTime, formatRelative,
+  formatEventDate, formatEventTimeOf, formatRelativeOf,
   selectFlaggedItems, selectRemainingItems,
 } from '../state/selectors.js'
 import './Views.css'
@@ -30,13 +30,13 @@ export function EventHeader({ event, compact = false }) {
         <span className="evhead__chunk">
           <Icon name="clock" size={16} />
           <span className="evhead__mono">
-            {formatEventDate(event.startsAt)} · {formatEventTime(event.startsAt)}
+            {formatEventDate(event.startsAt)} · {formatEventTimeOf(event)}
           </span>
         </span>
         {event.location ? (
           <span className="evhead__chunk"><Icon name="pin" size={16} />{event.location}</span>
         ) : null}
-        <span className="evhead__rel">{formatRelative(event.startsAt)}</span>
+        <span className="evhead__rel">{formatRelativeOf(event)}</span>
       </p>
     </div>
   )

@@ -105,6 +105,7 @@ function reducer(state, action) {
         id: uid('evt'),
         title: action.title,
         startsAt: action.startsAt,
+        allDay: !!action.allDay,   // shows "All day" instead of a time
         location: action.location || '',
         reminders: action.reminders || [],
         // New events start with one general category plus any kits applied.
@@ -138,6 +139,9 @@ function reducer(state, action) {
       return mapEvent(state, action.eventId, (event) => ({
         ...event,
         ...action.patch,
+        // Giving an all-day event a specific time (e.g. by voice: "it's at
+        // 3 PM now") turns it into a timed event.
+        ...(action.patch.startsAt && !('allDay' in action.patch) ? { allDay: false } : {}),
       }))
 
     // ---- Categories -------------------------------------------------------

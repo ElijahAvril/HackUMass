@@ -15,10 +15,15 @@
  * Returns undefined when there are no upcoming events - that undefined is what
  * triggers the big empty-state screen.
  */
+/** When an event stops being "next": 2 hours after it starts, or at
+ *  midnight for an all-day event. */
+const eventOverAt = (e) =>
+  new Date(e.startsAt).getTime() + (e.allDay ? 24 : 2) * 60 * 60 * 1000
+
 export function selectNextEvent(events) {
   const now = Date.now()
   return [...events]
-    .filter((e) => new Date(e.startsAt).getTime() >= now - 2 * 60 * 60 * 1000) // 2h grace
+    .filter((e) => eventOverAt(e) >= now)
     .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))[0]
 }
 
@@ -103,6 +108,23 @@ export function formatRelative(iso) {
   if (diffDays === 1) return 'tomorrow'
   if (diffDays < 7) return `in ${diffDays} days`
   return `in ${Math.round(diffDays / 7)} week${diffDays >= 14 ? 's' : ''}`
+}
+
+/** "9:00 AM" - or "All day" for all-day events. */
+export const formatEventTimeOf = (event) =>
+  (event.allDay ? 'All day' : formatEventTime(event.startsAt))
+
+/** Like formatRelative, but an all-day event is "today" for the whole day. */
+export function formatRelativeOf(event) {
+  if (!event.allDay) return formatRelative(event.startsAt)
+  const start = new Date(event.startsAt); start.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const days = Math.round((start - today) / 86400000)
+  if (days < 0) return 'earlier'
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  if (days < 7) return `in ${days} days`
+  return `in ${Math.round(days / 7)} week${days >= 14 ? 's' : ''}`
 }
 
 /** Turns a reminder offset into both a label and the clock time it will fire. */
