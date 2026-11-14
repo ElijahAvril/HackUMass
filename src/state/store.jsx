@@ -75,6 +75,14 @@ function reducer(state, action) {
     case 'OPEN_EVENT':
       return { ...state, ui: { ...state.ui, tab: 'next', openEventId: action.eventId } }
 
+    // "New event" from anywhere: jump to the Events tab with the form open,
+    // optionally with a date already filled in (from the Calendar tab).
+    case 'OPEN_NEW_EVENT':
+      return { ...state, ui: { ...state.ui, tab: 'events', newEvent: { date: action.date || '' } } }
+
+    case 'CLEAR_NEW_EVENT':
+      return { ...state, ui: { ...state.ui, newEvent: null } }
+
     case 'START_PACKING':
       return { ...state, ui: { ...state.ui, packingEventId: action.eventId } }
 
@@ -258,6 +266,8 @@ export function StoreProvider({ children }) {
     setTab: (tab, eventId) => dispatch({ type: 'SET_TAB', tab, eventId }),
     openEvent: (eventId) => dispatch({ type: 'OPEN_EVENT', eventId }),
     startPacking: (eventId) => dispatch({ type: 'START_PACKING', eventId }),
+    openNewEvent: (date) => dispatch({ type: 'OPEN_NEW_EVENT', date }),
+    clearNewEvent: () => dispatch({ type: 'CLEAR_NEW_EVENT' }),
     stopPacking: () => dispatch({ type: 'STOP_PACKING' }),
 
     addEvent: (payload) => dispatch({ type: 'ADD_EVENT', ...payload }),

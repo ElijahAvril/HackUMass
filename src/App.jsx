@@ -18,6 +18,7 @@ import { EventView } from './components/EventView.jsx'
 import { EventsTab } from './components/EventsTab.jsx'
 import { KitsTab } from './components/KitsTab.jsx'
 import { SettingsTab } from './components/SettingsTab.jsx'
+import { CalendarTab } from './components/CalendarTab.jsx'
 import { ProgressCard } from './components/ProgressCard.jsx'
 import { RemindersCard } from './components/RemindersCard.jsx'
 import { PackingMode } from './components/PackingMode.jsx'
@@ -87,6 +88,7 @@ export default function App() {
   const renderTab = () => {
     switch (state.ui.tab) {
       case 'events':   return <EventsTab />
+      case 'calendar': return <CalendarTab />
       case 'kits':     return <KitsTab />
       case 'settings': return <SettingsTab />
       case 'next':
@@ -114,7 +116,7 @@ export default function App() {
         </div>
       ) : null}
 
-      <div className="shell">
+      <div className={`shell ${showRail ? '' : 'shell--norail'}`}>
         <div className="shell__nav"><Sidebar /></div>
 
         <main className="shell__main" id="main">{renderTab()}</main>

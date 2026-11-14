@@ -4,9 +4,8 @@
    =========================================================================== */
 .panel { position: relative; }
 .panel__title {
-  font-size: var(--fs-md); font-weight: 800;
-  padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
-  border-bottom: 1px dashed var(--rule);
+  font-size: var(--fs-md); font-weight: 700;
+  margin: 0 0 var(--sp-3);
 }
 .panel__empty { color: var(--ink-soft); font-size: var(--fs-sm); margin: 0 0 var(--sp-3); }
 .panel__hint  { color: var(--ink-soft); font-size: var(--fs-sm); margin: var(--sp-3) 0; }
@@ -15,17 +14,18 @@
 
 /* ---- Progress ------------------------------------------------------------ */
 .progress__headline { display: flex; align-items: baseline; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
-.progress__big { font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1; font-weight: 800; }
-.progress__of  { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; }
+.progress__big { font-family: var(--font-display); font-size: calc(2.8rem * var(--text-scale)); line-height: 1; font-weight: 800; }
+.progress__of  { font-family: var(--font-display); font-size: var(--fs-md); font-weight: 700; }
 
 .progress__ticks { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: var(--sp-3); }
 .progress__tick {
-  width: 22px; height: 22px;
+  width: 20px; height: 20px;
   display: grid; place-items: center;
-  border: 2px solid var(--ink); border-radius: 3px;
+  border: 1.5px solid var(--ink-soft); border-radius: 4px;
+  background: #FFF;
   color: var(--success);
 }
-.progress__tick.is-on { background: var(--success-bg); }
+.progress__tick.is-on { border-color: var(--ink); }
 .progress__more { font-size: var(--fs-sm); color: var(--ink-soft); align-self: center; }
 
 /* The bar is deliberately thick: a 4px hairline is hard to read for anyone
@@ -51,7 +51,7 @@
 .reminders { list-style: none; margin: 0; padding: 0; }
 .reminders__row {
   display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-2) 0; border-bottom: 1px dashed var(--rule);
+  padding: var(--sp-3) 0; border-bottom: 1px solid var(--rule);
   color: var(--ink-soft);
 }
 .reminders__row:last-child { border-bottom: none; }
@@ -69,4 +69,14 @@
 .tip p { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
 
 /* ---- The Start packing CTA ----------------------------------------------- */
-.startbtn { width: 100%; font-size: var(--fs-lg); min-height: 60px; }
+.startbtn { width: 100%; font-size: var(--fs-lg); min-height: 64px; border-radius: var(--radius-lg); }
+
+/* ---- "Next up" side card (Events tab) ------------------------------------ */
+.nextup .progress__ticks { margin: var(--sp-3) 0; }
+.nextup__title { font-size: var(--fs-lg); font-weight: 800; margin: 0 0 var(--sp-1); }
+.nextup__when { font-size: var(--fs-sm); color: var(--ink-soft); margin: 0 0 var(--sp-3); }
+.eyebrow {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xs); font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-soft);
+}

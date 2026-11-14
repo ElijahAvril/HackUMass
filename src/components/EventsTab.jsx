@@ -6,103 +6,23 @@
 // about the ORDER of what's coming and how ready each one is. So each row
 // carries a progress summary, which a calendar grid has no room for.
 //
-// The month strip at the top is a lightweight custom calendar rather than
-// FullCalendar: FullCalendar is ~200kB and brings its own DOM and focus
-// behaviour that we would have to re-audit for accessibility. A list of dates
-// that marks which days have events is enough for this product, and it is
-// 40 lines we fully control.
+// The month grid lives in its own Calendar tab (CalendarTab.jsx). Each row
+// here leads with a coloured date block, so the list scans like an agenda.
 // ---------------------------------------------------------------------------
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from './Icon.jsx'
-import { EventHeader } from './EventView.jsx'
 import { useStore } from '../state/store.jsx'
-import { selectSortedEvents, selectProgress } from '../state/selectors.js'
+import {
+  selectSortedEvents, selectProgress, selectNextEvent, eventTone,
+  formatEventTime, formatRelative,
+} from '../state/selectors.js'
 import './Views.css'
 
-/** Mini month view. Days with events get a dot AND the day number bolded. */
-function MonthStrip({ events, onPick }) {
-  const [offset, setOffset] = useState(0) // months away from the current one
-
-  const { label, cells } = useMemo(() => {
-    const base = new Date()
-    base.setDate(1)
-    base.setMonth(base.getMonth() + offset)
-
-    const year = base.getFullYear()
-    const month = base.getMonth()
-    const first = new Date(year, month, 1)
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    // Pad the grid so the 1st lands under the right weekday column.
-    const pad = first.getDay()
-
-    const byDay = new Map()
-    events.forEach((event) => {
-      const d = new Date(event.startsAt)
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        byDay.set(d.getDate(), [...(byDay.get(d.getDate()) || []), event])
-      }
-    })
-
-    return {
-      label: first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
-      cells: [
-        ...Array.from({ length: pad }, () => null),
-        ...Array.from({ length: daysInMonth }, (_, i) => ({
-          day: i + 1,
-          events: byDay.get(i + 1) || [],
-          isToday:
-            new Date().toDateString() === new Date(year, month, i + 1).toDateString(),
-        })),
-      ],
-    }
-  }, [events, offset])
-
-  return (
-    <section className="card month" aria-labelledby="month-heading">
-      <div className="month__bar">
-        <button type="button" className="icon-btn" onClick={() => setOffset((o) => o - 1)}>
-          <Icon name="back" size={18} /><span className="sr-only">Previous month</span>
-        </button>
-        <h2 className="month__label" id="month-heading">{label}</h2>
-        <button type="button" className="icon-btn" onClick={() => setOffset((o) => o + 1)}>
-          <Icon name="forward" size={18} /><span className="sr-only">Next month</span>
-        </button>
-      </div>
-
-      <div className="month__grid" role="grid" aria-labelledby="month-heading">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <span key={i} className="month__dow" aria-hidden="true">{d}</span>
-        ))}
-        {cells.map((cell, i) =>
-          cell === null ? (
-            <span key={`pad-${i}`} />
-          ) : cell.events.length ? (
-            <button
-              key={cell.day}
-              type="button"
-              className={`month__day has-event ${cell.isToday ? 'is-today' : ''}`}
-              onClick={() => onPick(cell.events[0].id)}
-            >
-              {cell.day}
-              <span className="month__dot" aria-hidden="true" />
-              <span className="sr-only">
-                {cell.events.length} event{cell.events.length === 1 ? '' : 's'}: {cell.events.map((e) => e.title).join(', ')}
-              </span>
-            </button>
-          ) : (
-            <span key={cell.day} className={`month__day ${cell.isToday ? 'is-today' : ''}`}>{cell.day}</span>
-          )
-        )}
-      </div>
-    </section>
-  )
-}
-
 /** The add-an-event form. Collapsed by default to keep the list scannable. */
-function EventForm({ onDone }) {
+function EventForm({ onDone, initialDate = '' }) {
   const { state, actions } = useStore()
   const [title, setTitle] = useState('')
-  const [date, setDate] = useState('')
+  const [date, setDate] = useState(initialDate)
   const [time, setTime] = useState('09:00')
   const [location, setLocation] = useState('')
   // Kits chosen here are copied into the new event as ready-made lists.
@@ -185,73 +105,147 @@ function EventForm({ onDone }) {
   )
 }
 
+/** The coloured date block: weekday, day number, month. */
+export function DateBlock({ iso, tone }) {
+  const d = new Date(iso)
+  return (
+    <span className="dateblock" style={{ background: tone }} aria-hidden="true">
+      <span className="dateblock__small">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+      <span className="dateblock__big">{d.getDate()}</span>
+      <span className="dateblock__small">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
+    </span>
+  )
+}
+
+/** Row of little tick boxes - the same paper metaphor as the progress card. */
+export function TickRow({ packed, total, max = 10 }) {
+  const shown = Math.min(total, max)
+  const on = total > max ? Math.round((packed / total) * max) : packed
+  return (
+    <span className="progress__ticks tickrow" aria-hidden="true">
+      {Array.from({ length: shown }, (_, i) => (
+        <span key={i} className={`progress__tick ${i < on ? 'is-on' : ''}`}>
+          {i < on ? <Icon name="check" size={12} strokeWidth={3} /> : null}
+        </span>
+      ))}
+      {total > max ? <span className="progress__more">+{total - max}</span> : null}
+    </span>
+  )
+}
+
 export function EventsTab() {
   const { state, actions } = useStore()
   const [adding, setAdding] = useState(false)
+  const [prefillDate, setPrefillDate] = useState('')
   const events = selectSortedEvents(state.events)
+  const next = selectNextEvent(state.events)
+  const nextProgress = selectProgress(next)
+
+  // "New event" pressed in the sidebar or on the Calendar: open the form.
+  useEffect(() => {
+    if (!state.ui.newEvent) return
+    setPrefillDate(state.ui.newEvent.date || '')
+    setAdding(true)
+    actions.clearNewEvent()
+  }, [state.ui.newEvent, actions])
 
   return (
-    <div className="stack">
-      <div className="row">
-        <h1 className="page__title">Events</h1>
-        <span className="spacer" />
-        <button type="button" className="btn btn--primary" onClick={() => setAdding((v) => !v)}
-                aria-expanded={adding}>
-          <Icon name="plus" size={18} /> Add an event
-        </button>
+    <div className="split">
+      <div className="stack">
+        <header className="card evhead__card">
+          <span className="tape tape--left" aria-hidden="true" />
+          <p className="eyebrow">
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+          <h1 className="page__title">Events</h1>
+          <p className="panel__hint" style={{ margin: 'var(--sp-1) 0 var(--sp-4)' }}>
+            Your upcoming events and what to bring to each one.
+          </p>
+          <button type="button" className="btn btn--primary" onClick={() => setAdding((v) => !v)}
+                  aria-expanded={adding}>
+            <Icon name="plus" size={18} /> Add an event
+          </button>
+        </header>
+
+        {adding ? (
+          <EventForm key={prefillDate} initialDate={prefillDate} onDone={() => setAdding(false)} />
+        ) : null}
+
+        <h2 className="list__heading"><Icon name="calendar" size={20} /> Coming up</h2>
+
+        {events.length === 0 ? (
+          <p className="card panel__empty">No events yet. Add one above to start a packing list.</p>
+        ) : (
+          <ul className="eventlist">
+            {events.map((event) => {
+              const progress = selectProgress(event)
+              return (
+                <li key={event.id} className="card agrow">
+                  <DateBlock iso={event.startsAt} tone={eventTone(event, state.events)} />
+
+                  <div className="agrow__main">
+                    <h3 className="agrow__title">{event.title}</h3>
+                    <p className="agrow__meta">
+                      <span><Icon name="clock" size={15} /> {formatEventTime(event.startsAt)} · {formatRelative(event.startsAt)}</span>
+                      {event.location ? <span><Icon name="pin" size={15} /> {event.location}</span> : null}
+                    </p>
+                    <p className="agrow__progress">
+                      <TickRow packed={progress.packed} total={progress.total} />
+                      <span className="eventlist__count"><strong>{progress.packed} of {progress.total}</strong> packed</span>
+                    </p>
+
+                    <div className="eventlist__actions">
+                      <button type="button" className="btn" onClick={() => actions.openEvent(event.id)}>
+                        <Icon name="bag" size={16} /> Open list<span className="sr-only"> for {event.title}</span>
+                      </button>
+                      <button type="button" className="btn btn--primary" onClick={() => actions.startPacking(event.id)}>
+                        <Icon name="check" size={16} /> Start packing<span className="sr-only"> for {event.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--danger"
+                        onClick={() => {
+                          // A destructive action gets a confirm. Native confirm() is
+                          // keyboard and screen-reader accessible for free.
+                          if (window.confirm(`Delete "${event.title}" and its packing list?`)) {
+                            actions.removeEvent(event.id)
+                            actions.announce(`${event.title} deleted`)
+                          }
+                        }}
+                      >
+                        <Icon name="trash" size={16} /> Delete<span className="sr-only"> {event.title}</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
 
-      {adding ? <EventForm onDone={() => setAdding(false)} /> : null}
-
-      <MonthStrip events={events} onPick={(id) => actions.openEvent(id)} />
-
-      {events.length === 0 ? (
-        <p className="card panel__empty">No events yet. Add one above to start a packing list.</p>
-      ) : (
-        <ul className="eventlist">
-          {events.map((event) => {
-            const progress = selectProgress(event)
-            return (
-              <li key={event.id} className="card eventlist__row">
-                <EventHeader event={event} compact />
-
-                <p className="eventlist__progress">
-                  <span className="eventlist__bar" aria-hidden="true">
-                    <span style={{ width: `${progress.percent}%` }} />
-                  </span>
-                  <span className="eventlist__count">
-                    {progress.packed} of {progress.total} packed
-                  </span>
-                </p>
-
-                <div className="eventlist__actions">
-                  <button type="button" className="btn" onClick={() => actions.openEvent(event.id)}>
-                    <Icon name="bag" size={16} /> Open list
-                  </button>
-                  <button type="button" className="btn btn--primary" onClick={() => actions.startPacking(event.id)}>
-                    <Icon name="check" size={16} /> Start packing
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--danger"
-                    onClick={() => {
-                      // A destructive action gets a confirm. Native confirm() is
-                      // keyboard and screen-reader accessible for free; a custom
-                      // modal would need focus trapping to match it.
-                      if (window.confirm(`Delete "${event.title}" and its packing list?`)) {
-                        actions.removeEvent(event.id)
-                        actions.announce(`${event.title} deleted`)
-                      }
-                    }}
-                  >
-                    <Icon name="trash" size={16} /> Delete
-                  </button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      {/* Side card: the next event and one big button to start packing it. */}
+      {next ? (
+        <aside className="card panel nextup" aria-labelledby="nextup-heading">
+          <span className="tape tape--right" aria-hidden="true" />
+          <p className="eyebrow">Next up · {formatRelative(next.startsAt)}</p>
+          <h2 className="nextup__title" id="nextup-heading">{next.title}</h2>
+          <p className="nextup__when">
+            {new Date(next.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatEventTime(next.startsAt)}
+          </p>
+          <p className="progress__headline">
+            <strong className="progress__big">{nextProgress.packed}</strong>
+            <span className="progress__of">of {nextProgress.total} items</span>
+          </p>
+          <TickRow packed={nextProgress.packed} total={nextProgress.total} />
+          <p className="progress__caption" style={{ marginBottom: 'var(--sp-4)' }}>
+            {nextProgress.remaining} still to pack
+          </p>
+          <button type="button" className="btn btn--primary startbtn" onClick={() => actions.startPacking(next.id)}>
+            <Icon name="bag" size={22} /> Start packing
+          </button>
+        </aside>
+      ) : null}
     </div>
   )
 }

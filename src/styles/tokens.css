@@ -16,33 +16,36 @@
 
 :root {
   /* ---- Paper & ink -------------------------------------------------- */
-  --paper:        #EADCBE;  /* app background - the kraft/tan desk */
-  --card:         #FFFDF7;  /* note cards sitting on the desk */
-  --card-edge:    #E6DCC6;  /* hairline border on cards */
-  --tape:         #E3C98B;  /* the washi-tape strips */
-  --ink:          #2B2622;  /* primary text */
-  --ink-soft:     #6B6258;  /* secondary text, captions */
-  --rule:         #CFC4AC;  /* dashed separators between items */
+  --paper:        #EFE6D6;  /* app background - cream notebook paper */
+  --paper-line:   rgba(120, 90, 55, .07); /* the faint ruled lines on it */
+  --card:         #FCF8EF;  /* note cards sitting on the desk */
+  --card-edge:    #E4D9C7;  /* hairline border on cards */
+  --tape:         #E8CC85;  /* the washi-tape strips */
+  --ink:          #221B16;  /* primary text */
+  --ink-soft:     #6B5E52;  /* secondary text, captions */
+  --rule:         #E4D9C7;  /* separators between items */
+  --dark:         #2A221D;  /* primary buttons, active nav, Start packing */
+  --dark-ink:     #FCF8EF;  /* text on --dark */
 
   /* ---- Semantic colours ---------------------------------------------
      These four are the ONLY ones the colour-blind palette overrides.
      Keep semantic names (success/warn), never literal names (green/yellow),
      so the override below stays meaningful.                              */
-  --success:      #B32C2C;  /* the red PACKED stamp */
+  --success:      #B3261E;  /* the red PACKED stamp */
   --success-bg:   #FBEDE9;
-  --warn:         #F3DE8A;  /* highlighter bar on flagged items */
+  --warn:         #F3E0AE;  /* sticky note on flagged items */
   --warn-edge:    #D4B64A;
-  --accent:       #BFD9E8;  /* info / tip cards */
-  --accent-edge:  #8FB8CF;
+  --accent:       #D3E2EC;  /* info / tip cards, "Saved kit" chip */
+  --accent-edge:  #9DB9CC;
 
   /* ---- Category pill tints -------------------------------------------
      Indexed so a new category just picks the next number - see
      categoryTone() in src/state/selectors.js                            */
-  --tone-1: #F5D8DE;  /* Documents  */
-  --tone-2: #CFE5D2;  /* Clothes    */
-  --tone-3: #EBD9B4;  /* Bag        */
-  --tone-4: #D9D4EC;  /* spare      */
-  --tone-5: #F3E0C4;  /* spare      */
+  --tone-1: #F4D3D0;  /* pink     - Documents */
+  --tone-2: #D5E6CF;  /* green    - Clothes   */
+  --tone-3: #F3E0AE;  /* yellow   - Bag       */
+  --tone-4: #D3E2EC;  /* blue                 */
+  --tone-5: #E1DAF0;  /* lavender             */
 
   /* ---- Type ----------------------------------------------------------
      --text-scale is multiplied into every font size. The Settings screen
@@ -50,8 +53,11 @@
      the entire app grows. This is cheaper and more robust than per-component
      "large text" variants.                                              */
   --text-scale: 1;
-  --font-display: 'Baloo 2', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
-  --font-body:    'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Lexend was designed to reduce visual stress and improve reading speed,
+     which suits an accessibility-first app. One family for everything keeps
+     the look calm; weight does the work that a second font used to. */
+  --font-display: 'Lexend', 'Segoe UI', system-ui, sans-serif;
+  --font-body:    'Lexend', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
 
   --fs-xs:  calc(0.75rem  * var(--text-scale));
@@ -65,13 +71,14 @@
   --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
   --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
   --radius-sm: 6px;  --radius-md: 10px;  --radius-lg: 16px;
-  --shadow-card: 0 1px 0 rgba(43, 38, 34, 0.08), 0 6px 16px rgba(43, 38, 34, 0.07);
+  --shadow-card: 0 1px 0 rgba(60, 40, 20, .05), 0 8px 18px -10px rgba(60, 40, 20, .35);
+  --shadow-btn:  0 2px 0 rgba(34, 27, 22, .18);
 
   /* ---- Accessibility constants ---------------------------------------
      44px is the WCAG 2.1 AA minimum target size. Every tappable control
      inherits this, so you can't accidentally ship a 20px checkbox.      */
   --target-min: 44px;
-  --focus-ring: 3px solid #1D6FB8;
+  --focus-ring: 3px solid #1D4ED8;
 }
 
 /* ===========================================================================
