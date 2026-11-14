@@ -55,9 +55,9 @@ export function Sidebar() {
       </ul>
 
       {/* Dashed "new" button: always one click from anywhere in the app. */}
-      <button type="button" className="sidebar__new" onClick={() => actions.openNewEvent()}>
-        <Icon name="plus" size={20} />
-        <span>New event</span>
+      <button type="button" className="sidebar__new" onClick={() => actions.openNewEvent()} title="New event">
+        <Icon name="plus" size={20} strokeWidth={2.2} />
+        <span className="sidebar__newlabel">New event</span>
       </button>
     </nav>
   )

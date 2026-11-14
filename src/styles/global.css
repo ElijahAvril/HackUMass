@@ -153,7 +153,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
   .shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'main' 'rail';
-    padding-bottom: 96px;   /* clears the fixed bottom nav */
+    padding-bottom: 180px;  /* clears the bottom nav and the floating + button */
   }
   /* The nav becomes a fixed bottom bar, so it must not hold a grid slot -
      otherwise the grid adds an empty column and squeezes the content. */
