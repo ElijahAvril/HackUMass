@@ -17,7 +17,7 @@ test("recognizes and removes the explicit I'm done end phrase", () => {
   assert.equal(removeAssistantEndPhrase("I'm done"), "");
 });
 
-test("resolves only exact, unambiguous packing actions against current lists", () => {
+test("resolves unambiguous packing actions with simple singular/plural variations", () => {
   const categories = [
     {
       id: "documents",
@@ -39,7 +39,8 @@ test("resolves only exact, unambiguous packing actions against current lists", (
     { type: "unpack", category: "Clothes", itemName: "Dress shoes" },
     { type: "add_item", category: "Clothes", itemName: "Jacket" },
     { type: "mark_packed", category: "Clothes", itemName: "Jacket" },
-    { type: "remove_item", category: "Documents", itemName: "Reference letters" },
+    { type: "remove_item", category: "Document", itemName: "Reference letter" },
+    { type: "add_item", category: "Document", itemName: "Nationalization" },
     { type: "add_item", category: "Clothes", itemName: "jacket" },
     { type: "remove_item", category: "Documents", itemName: "Unknown item" },
     { type: "unpack", category: "Unknown list", itemName: "Passport" }
@@ -56,7 +57,8 @@ test("resolves only exact, unambiguous packing actions against current lists", (
       { type: "unpack", itemName: "Dress shoes", categoryName: "Clothes" },
       { type: "add_item", itemName: "Jacket", categoryName: "Clothes" },
       { type: "mark_packed", itemName: "Jacket", categoryName: "Clothes" },
-      { type: "remove_item", itemName: "Reference letters", categoryName: "Documents" }
+      { type: "remove_item", itemName: "Reference letters", categoryName: "Documents" },
+      { type: "add_item", itemName: "Nationalization", categoryName: "Documents" }
     ]
   );
   assert.equal(result.skipped, 3);

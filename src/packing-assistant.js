@@ -1,6 +1,31 @@
 import { uid } from './state/seed.js'
 
 const normalize = (value) => value.trim().toLocaleLowerCase()
+const normalizeForMatching = (value) => normalize(value)
+  .normalize('NFKC')
+  .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+  .split(/\s+/)
+  .filter(Boolean)
+  .map((word) => {
+    if (word.endsWith('ies') && word.length > 4) return `${word.slice(0, -3)}y`
+    if (word.endsWith('s') && word.length > 3 && !/(ss|us|is)$/.test(word)) {
+      return word.slice(0, -1)
+    }
+    return word
+  })
+  .join(' ')
+
+function findMatchingEntries(entries, requestedName) {
+  const exactMatches = entries.filter(
+    (entry) => normalize(entry.name) === normalize(requestedName),
+  )
+  if (exactMatches.length > 0) return exactMatches
+
+  const canonicalName = normalizeForMatching(requestedName)
+  return entries.filter(
+    (entry) => normalizeForMatching(entry.name) === canonicalName,
+  )
+}
 const END_PHRASE_PATTERN = /\bi['’]m\s+done[.!?,\s]*$/i
 
 export function hasAssistantEndPhrase(transcript) {
@@ -79,9 +104,7 @@ export function resolvePackingActions(
       const name = command.category.trim()
       if (
         !name
-        || workingCategories.some(
-          (category) => normalize(category.name) === normalize(name),
-        )
+        || findMatchingEntries(workingCategories, name).length > 0
       ) {
         skipped += 1
         continue
@@ -101,9 +124,7 @@ export function resolvePackingActions(
     }
 
     if (command.type === 'remove_list') {
-      const matches = workingCategories.filter(
-        (category) => normalize(category.name) === normalize(command.category),
-      )
+      const matches = findMatchingEntries(workingCategories, command.category)
       if (matches.length !== 1) {
         skipped += 1
         continue
@@ -118,18 +139,14 @@ export function resolvePackingActions(
       continue
     }
 
-    const matchingCategories = workingCategories.filter(
-      (category) => normalize(category.name) === normalize(command.category),
-    )
+    const matchingCategories = findMatchingEntries(workingCategories, command.category)
     if (matchingCategories.length !== 1) {
       skipped += 1
       continue
     }
 
     const category = matchingCategories[0]
-    const matchingItems = category.items.filter(
-      (item) => normalize(item.name) === normalize(command.itemName),
-    )
+    const matchingItems = findMatchingEntries(category.items, command.itemName)
 
     if (command.type === 'add_item') {
       if (matchingItems.length > 0) {

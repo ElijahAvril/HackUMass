@@ -25,8 +25,7 @@ async function createService(geminiFetch) {
 function packingAssistantResponse(actions = [{
   type: "mark_packed",
   category: "Documents",
-  itemName: "Passport",
-  offsetMinutes: 0
+  itemName: "Passport"
 }]) {
   return new Response(JSON.stringify({
     candidates: [{
@@ -193,6 +192,10 @@ test("interprets packing requests using only the supplied event lists", async (t
     location: "Boston"
   });
   assert.equal(context.timeZone, "America/New_York");
+  assert.deepEqual(
+    prompt.generationConfig.responseSchema.properties.actions.items.required,
+    ["type"]
+  );
 });
 
 test("supports creating a list and adding a relative reminder", async (t) => {

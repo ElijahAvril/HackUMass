@@ -594,14 +594,7 @@ export function createSpeechToTextServer({
                       field: { type: "STRING", enum: ["location", "startsAt"] },
                       value: { type: "STRING" }
                     },
-                    required: [
-                      "type",
-                      "category",
-                      "itemName",
-                      "offsetMinutes",
-                      "field",
-                      "value"
-                    ]
+                    required: ["type"]
                   }
                 }
               },
