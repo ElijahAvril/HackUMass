@@ -144,7 +144,7 @@ export function PackingMode({ event }) {
 
             {dictation.listening ? (
               <p className="packing__hint" aria-live="polite">
-                Say “packed”, “skip”, “repeat”, or an item’s name. Heard: {dictation.transcript || '…'}
+                Say “packed”, “skip”, “repeat”, or an item’s name.
               </p>
             ) : (
               <p className="packing__hint">{remaining.length} left on the list</p>

@@ -1,73 +1,98 @@
 # PackPal
 
-An accessible, installable packing-checklist PWA. Every event carries its own
-packing list; lists you repeat become reusable **kits**.
+PackPal is an accessible, installable packing-checklist PWA. Each event has
+its own packing list, and repeat lists can be saved as reusable kits. Checklist
+data is stored locally in the browser.
 
-## Running it
+## Run locally
 
-```bash
+Requires Node.js 20 or later and a Gemini API key.
+
+```powershell
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build into dist/
-npm run preview    # serve the production build (needed to test "Install app")
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Install prompt appears in Chrome/Edge desktop and "Add to Home Screen" on
-mobile once you serve over https or localhost.
+Set `GEMINI_API_KEY` in `.env`, then start the production server:
 
-## Where things live
-
-```
-src/
-  main.jsx              Mounts React, wraps everything in the store.
-  App.jsx               Shell, tab switching, the single aria-live region,
-                        reminder scheduling, empty-state + packing takeovers.
-  state/
-    seed.js             Demo data + the data-shape contract. Empty the events
-                        array to test the "no events" screen.
-    store.jsx           ONE reducer. Every mutation in the app is a case here.
-    selectors.js        Derived data: next event, progress, item ordering,
-                        date formatting. Nothing here is stored in state.
-  hooks/
-    useSpeech.js        Text to speech (read list aloud).
-    useDictation.js     Speech to text (dictate items, voice commands).
-    useReminders.js     Schedules notifications before an event.
-  styles/
-    tokens.css          Every colour/size/font as a variable. Colour-blind
-                        mode is a palette override at the bottom of this file.
-    global.css          Layout, .card, .btn, focus rings, shared primitives.
-  components/           One file per component, CSS beside it.
+```powershell
+npm start
 ```
 
-## The three rules that keep this editable
+Open `http://localhost:3000`. To develop the frontend with Vite, run `npm start`
+in one terminal and `npm run dev` in another; Vite proxies speech and API
+requests to the backend on port 3000.
 
-1. **No component hard-codes a colour or a font size.** They use tokens.
-   Theming happens in `tokens.css` keyed off `<html data-palette>`.
-2. **No component computes a derived value.** Progress, ordering and "which
-   event is next" come from `selectors.js`, so every screen agrees.
-3. **No component mutates state directly.** They call an action from
-   `store.jsx`, so there is one list of everything the app can do.
+Keep the Gemini API key in `.env` on the server. Never put it in browser code
+or commit `.env`. Microphone access requires permission and a secure browser
+context; localhost is supported.
 
-## Accessibility
+## Voice input and assistant
 
-| Requirement | Where |
+The browser uses the Gemini Live speech service for dictation and packing voice
+commands. The browser streams mono PCM16 audio at 16 kHz to the
+`/speech-to-text` WebSocket endpoint. The backend proxies it to Gemini and
+returns interim and finalized transcripts. The reusable browser client is in
+`src/speech-to-text-client.js`.
+
+On an event page, **Talk to PackPal** records a conversation until you say
+**“I’m done”** or press **Submit now**. Gemini can:
+
+| Say | Action |
 |---|---|
-| Colour-blind mode | `tokens.css` palette override + Settings |
-| Never colour-only | "PACKED" word, "Priority" badge, hatched progress fill |
-| Text to speech | `useSpeech.js`, "Read list aloud", packing mode |
-| Speech to text | `useDictation.js`, mic on Add fields, voice commands |
-| Flagged items prioritised | `selectOrderedItems()` in `selectors.js` |
-| Where items are kept | `item.note`, shown inline and read aloud |
-| Reminders | `useReminders.js` + `RemindersCard.jsx` |
-| Progress bar | `ProgressCard.jsx`, `role="progressbar"` |
-| 44px touch targets | `--target-min` in `tokens.css` |
-| Keyboard | Native controls throughout, skip link, visible focus ring |
-| Screen readers | One `aria-live` region in `App.jsx`, `actions.announce()` |
+| “Pack my passport. I’m done.” | Mark a matching existing item packed. |
+| “Unpack the dress shoes. I’m done.” | Mark a matching item unpacked. |
+| “Add a document called nationalization. I’m done.” | Add an item to an existing list. |
+| “Remove the reference letter from Documents. I’m done.” | Remove a matching item. |
+| “Create a list called Toiletries. I’m done.” | Create a list for the current event. |
+| “Delete the Toiletries list. I’m done.” | Delete that event list and its items. |
+| “Remind me 3 hours before the event. I’m done.” | Add a reminder three hours before the event. |
+| “Set the event location to the student center. I’m done.” | Update the current event location. |
+| “Move the event to 3 PM tomorrow. I’m done.” | Update the current event start time. |
 
-## Known limits (worth saying out loud at the demo)
+Item and list requests are matched against the current event. Unmatched or
+ambiguous requests are skipped rather than applied to an uncertain target.
+Singular/plural differences are supported when the match remains unambiguous.
+Reminder offsets can be given in minutes, hours, days, or weeks; the default is
+one day before the event. A reminder must be in the future and before the event
+starts. Silence submission is disabled for this assistant; use the explicit end
+phrase or manual submit button.
 
-- Reminders fire only while the app is open — real background delivery needs
-  the Push API and a server. See the note at the top of `useReminders.js`.
-- Speech recognition is Chrome/Edge/Safari only. The mic buttons hide
-  themselves where it is unsupported rather than failing silently.
-- Data is localStorage on the device. No account, no sync, works offline.
+## Development
+
+```powershell
+npm run dev       # Vite frontend at http://localhost:5173
+npm run build     # Production frontend in dist/
+npm test          # Build and run the test suite
+npm start         # Build and serve the app and backend at http://localhost:3000
+```
+
+## Firebase status
+
+Firebase client helper files and backend reminder interpretation support are
+present, but the current PackPal checklist UI stores its data locally and does
+not yet sync checklist data or saved reminders through Firebase. The Gemini
+speech and packing assistant work with `GEMINI_API_KEY`; Firebase is not needed
+for those features.
+
+## Project layout
+
+```text
+src/
+  components/           PackPal screens and controls
+  hooks/                Speech, dictation, and reminder hooks
+  state/                Checklist state, seed data, and selectors
+  styles/               Shared styles and design tokens
+  speech-to-text-client.js
+server.js                Express server and Gemini endpoints
+test/                    Server, speech, and packing assistant tests
+```
+
+## Accessibility and limitations
+
+- Colour-blind palette, text scaling, and reduced-motion settings
+- Text-to-speech for reading packing lists aloud
+- Keyboard-accessible controls, visible focus, and screen-reader announcements
+- Reminder notifications fire while the app is open; background delivery needs
+  a push service.
+- Browser audio processing varies by browser and device.

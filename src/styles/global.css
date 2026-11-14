@@ -166,6 +166,20 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
 .row    { display: flex; align-items: center; gap: var(--sp-3); }
 .spacer { flex: 1; }
 
+.packing-assistant { display: flex; flex-direction: column; gap: var(--sp-2); }
+.packing-assistant__message,
+.packing-assistant__error { margin: 0; font-size: var(--fs-sm); }
+.packing-assistant__message { color: var(--ink-soft); }
+.packing-assistant__error { color: #8C2F2F; }
+.packing-assistant__transcription {
+  padding: var(--sp-3);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: var(--fs-sm);
+}
+.packing-assistant__transcription p { margin: var(--sp-1) 0 0; }
+
 /* Reminder banner that appears in-page when an alert fires while the app is
    open. role="status" means screen readers announce it without stealing focus. */
 .reminderbanner {

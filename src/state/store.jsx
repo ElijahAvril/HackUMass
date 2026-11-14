@@ -134,6 +134,12 @@ function reducer(state, action) {
         },
       }
 
+    case 'UPDATE_EVENT':
+      return mapEvent(state, action.eventId, (event) => ({
+        ...event,
+        ...action.patch,
+      }))
+
     // ---- Categories -------------------------------------------------------
     case 'ADD_CATEGORY':
       return mapEvent(state, action.eventId, (e) => ({
@@ -152,7 +158,7 @@ function reducer(state, action) {
         mapCategory(e, action.categoryId, (c) => ({
           ...c,
           items: [...c.items, {
-            id: uid('it'),
+            id: action.itemId || uid('it'),
             name: action.name,
             note: action.note || '',       // the "where it's kept" line
             packed: false,
@@ -299,6 +305,7 @@ export function StoreProvider({ children }) {
 
     addEvent: (payload) => dispatch({ type: 'ADD_EVENT', ...payload }),
     removeEvent: (eventId) => dispatch({ type: 'REMOVE_EVENT', eventId }),
+    updateEvent: (eventId, patch) => dispatch({ type: 'UPDATE_EVENT', eventId, patch }),
 
     addCategory: (eventId, name) => dispatch({ type: 'ADD_CATEGORY', eventId, name }),
     // Copies a kit's items into an event as a new category, in ONE dispatch.
@@ -314,8 +321,8 @@ export function StoreProvider({ children }) {
     }),
     removeCategory: (eventId, categoryId) => dispatch({ type: 'REMOVE_CATEGORY', eventId, categoryId }),
 
-    addItem: (eventId, categoryId, name, note) =>
-      dispatch({ type: 'ADD_ITEM', eventId, categoryId, name, note }),
+    addItem: (eventId, categoryId, name, note, itemId) =>
+      dispatch({ type: 'ADD_ITEM', eventId, categoryId, name, note, itemId }),
     removeItem: (eventId, categoryId, itemId) =>
       dispatch({ type: 'REMOVE_ITEM', eventId, categoryId, itemId }),
     toggleItem: (eventId, categoryId, itemId, packed) =>

@@ -186,8 +186,8 @@ export function SettingsTab() {
         <p className="panel__hint">
           Voice input is {dictation.supported ? 'available' : 'not supported in this browser'}.
           {dictation.supported
-            ? ' Use the mic on any Add field, or say “packed”, “skip” and item names in packing mode.'
-            : ' Try Chrome, Edge, or Safari to dictate items.'}
+            ? ' Dictation uses the Gemini speech service. Use a microphone on an Add field or say “packed”, “skip” and item names in packing mode.'
+            : ' Use a browser with microphone and audio worklet support, such as a recent Chrome or Edge.'}
         </p>
       </section>
 

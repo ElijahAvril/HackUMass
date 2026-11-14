@@ -54,4 +54,14 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000',
+      '/health': 'http://localhost:3000',
+      '/speech-to-text': {
+        target: 'ws://localhost:3000',
+        ws: true,
+      },
+    },
+  },
 })
