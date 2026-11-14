@@ -17,6 +17,7 @@ import { Icon } from './Icon.jsx'
 import { EventHeader } from './EventView.jsx'
 import { useStore } from '../state/store.jsx'
 import { selectSortedEvents, selectProgress } from '../state/selectors.js'
+import { suggestKits } from '../state/suggestKits.js'
 import './Views.css'
 
 /** Mini month view. Days with events get a dot AND the day number bolded. */
@@ -107,6 +108,10 @@ function EventForm({ onDone }) {
   const [location, setLocation] = useState('')
   // Kits chosen here are copied into the new event as ready-made lists.
   const [kitIds, setKitIds] = useState([])
+    // Kits that fit this title go first and get a "Suggested" label
+  const suggestedIds = suggestKits(title, state.kits, state.events).map((k) => k.id)
+  const sortedKits = [...state.kits].sort(
+    (a, b) => suggestedIds.includes(b.id) - suggestedIds.includes(a.id))
 
   const submit = (e) => {
     e.preventDefault()
@@ -162,7 +167,7 @@ function EventForm({ onDone }) {
       {state.kits.length ? (
         <fieldset className="eventform__kits">
           <legend>Start from a saved kit</legend>
-          {state.kits.map((kit) => (
+          {sortedKits.map((kit) => (
             <label key={kit.id} className="eventform__kit">
               <input
                 type="checkbox"
@@ -171,8 +176,7 @@ function EventForm({ onDone }) {
                   setKitIds((ids) => (e.target.checked ? [...ids, kit.id] : ids.filter((id) => id !== kit.id)))
                 }
               />
-              <span>{kit.name} <span className="eventform__kitcount">({kit.items.length} items)</span></span>
-            </label>
+              <span>{kit.name} <span className="eventform__kitcount">({kit.items.length} items)</span>{suggestedIds.includes(kit.id) ? <strong> · Suggested</strong> : null}</span>            </label>
           ))}
         </fieldset>
       ) : null}
