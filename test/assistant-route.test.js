@@ -14,11 +14,33 @@ async function createService(geminiFetch) {
 
   return {
     service,
+    baseUrl: `http://127.0.0.1:${service.server.address().port}`,
     url: `http://127.0.0.1:${service.server.address().port}/api/assistant/interpret`,
     async close() {
       await new Promise((resolve) => service.server.close(resolve));
     }
   };
+}
+
+function packingAssistantResponse(actions = [{
+  type: "mark_packed",
+  category: "Documents",
+  itemName: "Passport",
+  offsetMinutes: 0
+}]) {
+  return new Response(JSON.stringify({
+    candidates: [{
+      content: {
+        parts: [{
+          text: JSON.stringify({
+            reply: "I marked the passport packed.",
+            clarification: "",
+            actions
+          })
+        }]
+      }
+    }]
+  }), { status: 200 });
 }
 
 function assistantResponse() {
@@ -124,4 +146,237 @@ test("rate limits the unauthenticated assistant endpoint", async (t) => {
 
   assert.equal(response.status, 429);
   assert.equal(geminiCalls, 8);
+});
+
+test("interprets packing requests using only the supplied event lists", async (t) => {
+  let prompt;
+  const testService = await createService(async (_url, options) => {
+    prompt = JSON.parse(options.body);
+    return packingAssistantResponse();
+  });
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Pack my passport.",
+      event: {
+        title: "Trip",
+        startsAt: "2030-04-04T10:00:00-04:00",
+        location: "Boston"
+      },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: [{
+        name: "Documents",
+        items: [{ name: "Passport", packed: false }]
+      }],
+      reminders: []
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).assistant.actions, [{
+    type: "mark_packed",
+    category: "Documents",
+    itemName: "Passport"
+  }]);
+  const context = JSON.parse(prompt.contents[0].parts[0].text);
+  assert.deepEqual(context.eventCategories, [{
+    name: "Documents",
+    items: [{ name: "Passport", packed: false }]
+  }]);
+  assert.deepEqual(context.event, {
+    title: "Trip",
+    startsAt: "2030-04-04T10:00:00-04:00",
+    location: "Boston"
+  });
+  assert.equal(context.timeZone, "America/New_York");
+});
+
+test("supports creating a list and adding a relative reminder", async (t) => {
+  let prompt;
+  const testService = await createService(async (_url, options) => {
+    prompt = JSON.parse(options.body);
+    return packingAssistantResponse([
+      {
+        type: "create_list",
+        category: "Toiletries",
+        itemName: "",
+        offsetMinutes: 0
+      },
+      {
+        type: "add_reminder",
+        category: "",
+        itemName: "",
+        offsetMinutes: 1440
+      }
+    ]);
+  });
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Create a Toiletries list and remind me one day before the event.",
+      event: {
+        title: "Trip",
+        startsAt: "2030-04-04T10:00:00-04:00",
+        location: "Boston"
+      },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: [],
+      reminders: []
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).assistant.actions, [
+    { type: "create_list", category: "Toiletries" },
+    { type: "add_reminder", offsetMinutes: 1440 }
+  ]);
+  const context = JSON.parse(prompt.contents[0].parts[0].text);
+  assert.deepEqual(context.eventCategories, []);
+  assert.deepEqual(context.existingReminderOffsets, []);
+});
+
+test("validates spoken event time and flexible reminder actions", async (t) => {
+  const testService = await createService(async () =>
+    packingAssistantResponse([
+      {
+        type: "update_event",
+        category: "",
+        itemName: "",
+        offsetMinutes: 0,
+        field: "startsAt",
+        value: "2030-04-05T19:00:00-04:00"
+      },
+      {
+        type: "add_reminder",
+        category: "",
+        itemName: "",
+        offsetMinutes: 135,
+        field: "",
+        value: ""
+      }
+    ])
+  );
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Move it to 7 PM and remind me 2 hours and 15 minutes before.",
+      event: {
+        title: "Trip",
+        startsAt: "2030-04-04T10:00:00-04:00",
+        location: "Boston"
+      },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: [],
+      reminders: []
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).assistant.actions.map((action) => action.type), [
+    "update_event",
+    "add_reminder"
+  ]);
+});
+
+test("defaults an unspecified reminder time to one day before the event", async (t) => {
+  const testService = await createService(async () =>
+    packingAssistantResponse([{
+      type: "add_reminder",
+      category: "",
+      itemName: "",
+      offsetMinutes: 0
+    }])
+  );
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Please remind me about this event.",
+      event: {
+        title: "Trip",
+        startsAt: "2030-04-04T10:00:00-04:00",
+        location: "Boston"
+      },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: [],
+      reminders: []
+    })
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).assistant.actions, [{
+    type: "add_reminder",
+    offsetMinutes: 1440
+  }]);
+});
+
+test("rejects packing requests with malformed event context", async (t) => {
+  const testService = await createService(async () => {
+    assert.fail("Gemini must not be called for invalid context.");
+  });
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Pack my passport.",
+      event: { title: "Trip", startsAt: "2030-04-04T10:00:00-04:00", location: "" },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: "invalid"
+    })
+  });
+
+  assert.equal(response.status, 400);
+});
+
+test("rejects unsupported actions returned by Gemini", async (t) => {
+  const testService = await createService(async () =>
+    packingAssistantResponse([{
+      type: "delete_event",
+      category: "Documents",
+      itemName: "Passport",
+      offsetMinutes: 0
+    }])
+  );
+  t.after(() => testService.close());
+
+  const response = await fetch(`${testService.baseUrl}/api/packing/interpret`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      transcript: "Delete the event.",
+      event: {
+        title: "Trip",
+        startsAt: "2030-04-04T10:00:00-04:00",
+        location: ""
+      },
+      now: "2030-04-01T10:00:00-04:00",
+      timeZone: "America/New_York",
+      categories: [{
+        name: "Documents",
+        items: [{ name: "Passport", packed: false }]
+      }],
+      reminders: []
+    })
+  });
+
+  assert.equal(response.status, 502);
+  assert.match((await response.json()).error, /invalid packing action/i);
 });

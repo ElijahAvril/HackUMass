@@ -84,25 +84,23 @@ test("proxies live PCM audio to Gemini and normalizes transcription events", asy
     ]);
   });
 
-  const demoResponse = await fetch(`http://127.0.0.1:${servicePort}/`);
-  assert.equal(demoResponse.status, 200);
-  const demoHtml = await demoResponse.text();
-  assert.match(demoHtml, /Live speech-to-text demo/);
-  assert.match(demoHtml, /assistant-enabled/);
-  assert.match(demoHtml, /1\.5 seconds/);
-  assert.match(demoHtml, /Recording playback/);
-  const clientResponse = await fetch(
-    `http://127.0.0.1:${servicePort}/speech-to-text-client.js`
-  );
-  assert.equal(clientResponse.status, 200);
-  assert.match(await clientResponse.text(), /export class SpeechToTextClient/);
+  const browserResponse = await fetch(`http://127.0.0.1:${servicePort}/`);
+  assert.equal(browserResponse.status, 200);
+  const browserHtml = await browserResponse.text();
+  assert.match(browserHtml, /PackPal/);
+  assert.doesNotMatch(browserHtml, /Live speech-to-text demo/);
+  const bundlePath = browserHtml.match(/src="([^"]+\.js)"/)?.[1];
+  assert.ok(bundlePath, "built PackPal JavaScript should be linked from the page");
   const bundleResponse = await fetch(
-    `http://127.0.0.1:${servicePort}/app.bundle.js`
+    `http://127.0.0.1:${servicePort}${bundlePath}`
   );
   assert.equal(bundleResponse.status, 200);
-  const bundle = await bundleResponse.text();
-  assert.match(bundle, /Sign in with Google/);
-  assert.match(bundle, /api\/assistant\/interpret/);
+  assert.match(await bundleResponse.text(), /speech_to_text\.transcript/);
+  const workletResponse = await fetch(
+    `http://127.0.0.1:${servicePort}/audio-capture-worklet.js`
+  );
+  assert.equal(workletResponse.status, 200);
+  assert.match(await workletResponse.text(), /registerProcessor/);
 
   const client = new WebSocket(`ws://127.0.0.1:${servicePort}/speech-to-text`);
   await once(client, "open");
@@ -141,11 +139,16 @@ test("proxies live PCM audio to Gemini and normalizes transcription events", asy
     client,
     (event) => event.type === "speech_to_text.transcript"
   );
+  const completionReceived = waitForMessage(
+    client,
+    (event) => event.type === "speech_to_text.complete"
+  );
   const upstreamClient = [...upstreamServer.clients][0];
   upstreamClient.send(JSON.stringify({
     serverContent: {
       interimInputTranscription: { text: "hell" },
-      inputTranscription: { text: "hello" }
+      inputTranscription: { text: "hello" },
+      turnComplete: true
     }
   }));
   assert.deepEqual(await interimReceived, {
@@ -155,6 +158,9 @@ test("proxies live PCM audio to Gemini and normalizes transcription events", asy
   assert.deepEqual(await finalReceived, {
     type: "speech_to_text.transcript",
     text: "hello"
+  });
+  assert.deepEqual(await completionReceived, {
+    type: "speech_to_text.complete"
   });
 });
 

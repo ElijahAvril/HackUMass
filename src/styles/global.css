@@ -1,0 +1,181 @@
+/* ===========================================================================
+   GLOBAL STYLES
+   ===========================================================================
+   Layout + the shared "paper" visual language. Component-specific rules live
+   next to their component in src/components/*.css so you can delete a feature
+   by deleting two files.
+   =========================================================================== */
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  /* Faint paper fibre texture, drawn with gradients so there's no image to
+     download (keeps the offline bundle small). */
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.35) 0, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(140,120,90,.08) 0, transparent 50%);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15; }
+
+/* ---- Focus visibility ---------------------------------------------------
+   One rule, applied globally. Never remove an outline without replacing it;
+   keyboard users navigate entirely by this ring. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Screen-reader-only text: visually hidden but still announced. Used for
+   labels where the visual design relies on an icon alone. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--ink); color: var(--card);
+  padding: var(--sp-3) var(--sp-4); border-radius: 0 0 var(--radius-md) 0;
+  font-weight: 700; text-decoration: none;
+}
+.skip-link:focus { left: 0; }
+
+/* ===========================================================================
+   THE "PAPER CARD" PRIMITIVE
+   ===========================================================================
+   Nearly every surface in the mockup is this: an off-white card with a soft
+   shadow. Defined once, reused everywhere, so adjusting the look of the whole
+   app is a single edit here. */
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  padding: var(--sp-5);
+}
+
+/* The washi tape strip. Purely decorative, so it's aria-hidden in markup. */
+.tape {
+  position: absolute;
+  width: 112px; height: 26px;
+  background: var(--tape);
+  opacity: .9;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+}
+.tape--left  { top: -12px; left: 36px;  transform: rotate(-2.5deg); }
+.tape--right { top: -12px; right: 28px; transform: rotate(2deg); }
+
+/* ---- Buttons ------------------------------------------------------------
+   Three variants only. Resist adding a fourth - restraint is what keeps the
+   prototype coherent when five people edit it during a hackathon. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--target-min);      /* AA touch target, enforced centrally */
+  padding: 0 var(--sp-4);
+  font-family: var(--font-display);
+  font-size: var(--fs-md); font-weight: 700;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-edge);
+  background: var(--card); color: var(--ink);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn:hover  { box-shadow: var(--shadow-card); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn--primary { background: var(--ink); color: #FFFDF7; border-color: var(--ink); }
+.btn--ghost   { background: transparent; border-color: transparent; }
+.btn--danger  { color: #8C2F2F; }
+
+/* Big CTA used by the empty state - same component, bigger scale. */
+.btn--xl { min-height: 72px; font-size: var(--fs-lg); padding: 0 var(--sp-6); }
+
+/* ---- Inputs -------------------------------------------------------------- */
+.field {
+  display: flex; flex-direction: column; gap: var(--sp-1);
+  font-size: var(--fs-sm); font-weight: 600; color: var(--ink-soft);
+}
+.input, .textarea, .select {
+  min-height: var(--target-min);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  font-family: var(--font-body); font-size: var(--fs-md); color: var(--ink);
+  background: #FFF; border: 1px solid var(--card-edge);
+  border-radius: var(--radius-sm);
+}
+.textarea { min-height: 64px; resize: vertical; }
+
+/* ===========================================================================
+   APP SHELL LAYOUT
+   ===========================================================================
+   Three columns on desktop (nav | main | rail), collapsing to a single column
+   with a bottom nav bar on phones. The grid-template-areas approach means
+   re-ordering regions is one line, not a DOM rewrite. */
+.shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 320px;
+  grid-template-areas: 'nav main rail';
+  gap: var(--sp-5);
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: var(--sp-5) var(--sp-5) 120px;
+  align-items: start;
+}
+.shell__nav  { grid-area: nav;  position: sticky; top: var(--sp-5); }
+.shell__main { grid-area: main; min-width: 0; }
+.shell__rail { grid-area: rail; position: sticky; top: var(--sp-5);
+               display: flex; flex-direction: column; gap: var(--sp-4); }
+
+@media (max-width: 1080px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'main' 'rail';
+    padding-bottom: 96px;   /* clears the fixed bottom nav */
+  }
+  .shell__nav  { position: static; }
+  .shell__rail { position: static; }
+}
+
+.stack  { display: flex; flex-direction: column; gap: var(--sp-4); }
+.row    { display: flex; align-items: center; gap: var(--sp-3); }
+.spacer { flex: 1; }
+
+.packing-assistant { display: flex; flex-direction: column; gap: var(--sp-2); }
+.packing-assistant__message,
+.packing-assistant__error { margin: 0; font-size: var(--fs-sm); }
+.packing-assistant__message { color: var(--ink-soft); }
+.packing-assistant__error { color: #8C2F2F; }
+.packing-assistant__transcription {
+  padding: var(--sp-3);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: var(--fs-sm);
+}
+.packing-assistant__transcription p { margin: var(--sp-1) 0 0; }
+
+/* Reminder banner that appears in-page when an alert fires while the app is
+   open. role="status" means screen readers announce it without stealing focus. */
+.reminderbanner {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--warn); border-bottom: 2px solid var(--warn-edge);
+  font-size: var(--fs-sm);
+}
+.reminderbanner span { flex: 1; }

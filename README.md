@@ -1,105 +1,96 @@
-# HackUMass Speech-to-Text Backend
+# PackPal
 
-A Node.js/Express application that serves a temporary live microphone demo and
-securely proxies audio to Gemini Live transcription. The Gemini API key stays
-on the server.
+PackPal is an accessible, installable packing-checklist app. Each event has its
+own packing list, and repeat lists can be saved as reusable kits. Speech input
+uses the app's Gemini Live transcription service for item dictation and packing
+voice commands. The Talk to PackPal button records a request, sends the
+transcription to Gemini, and applies clear packing-list actions; transcripts
+are not shown in a separate transcript panel.
 
 ## Run
 
-Requires Node.js 20 or later.
+Requires Node.js 20 or later and a Gemini API key.
 
 ```powershell
 npm install
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
-# Edit .env and add FIREBASE_PROJECT_ID without replacing your Gemini key.
+# Set GEMINI_API_KEY in .env.
 npm start
 ```
 
-The server loads `GEMINI_API_KEY` and `FIREBASE_PROJECT_ID` from `.env` or the
-process environment. `.env` is ignored by Git; do not commit or share it. Each
-person running the project should use their own Gemini key. Never put the Gemini
-key in browser code.
+Open `http://localhost:3000`. The app needs microphone access, a secure browser
+context (localhost is allowed), and an active connection to the speech backend
+for voice input. The Gemini API key stays on the server and must never be put
+in browser code.
 
-Open `http://localhost:3000` for the microphone demo. The HTTP health endpoint
-is `GET /health`. The reusable browser client connects to
-`ws://localhost:3000/speech-to-text` (use `wss://` when deployed with TLS).
+For frontend development, run `npm start` in one terminal and `npm run dev` in
+another. Vite proxies `/speech-to-text` and `/api` requests to the server on
+port 3000.
 
-## Firebase-free live assistant
+## Browser and speech service
 
-The demo's live assistant works without Firebase. With **Interpret speech with
-the live assistant** enabled, it waits 1.5 seconds after the latest finalized
-speech before sending the conversation to Gemini. It updates a temporary
-checklist draft with any stated check-off dates. Say **“I'm done”** to mark the
-thought complete; keep speaking to add a follow-up or correction. Checklist
-checkboxes are only local to the current page and are not saved. Reloading or
-closing the page clears the transcript and draft. No actions are run
-automatically.
+The finalized PackPal browser lives in `src/`. Its checklists, kits, and
+settings are saved in local storage and remain usable offline. The microphone
+controls send audio to the `/speech-to-text` WebSocket endpoint, where the
+server securely proxies it to Gemini's `gemini-3.5-transcribe-live` model.
+Finalized speech is used by the active dictation or packing command; the app
+does not display a separate transcript or record/play back audio.
 
-The assistant endpoint is limited to 8 requests per client IP per minute to
-reduce accidental Gemini usage. Because it does not require sign-in, this demo
-endpoint should not be exposed publicly without production-grade authentication
-and rate limiting.
+The browser client converts microphone audio to mono PCM16 at 16 kHz and sends
+it to the backend. The backend emits `speech_to_text.interim_transcript` and
+`speech_to_text.transcript` events. The HTTP health endpoint is `GET /health`.
 
-## WebSocket protocol
+The backend also includes authenticated reminder interpretation endpoints. To
+use those endpoints, configure `FIREBASE_PROJECT_ID` in `.env`, enable Google
+sign-in and Firestore in Firebase, and publish the included
+[Firestore security rules](./firestore.rules). The current PackPal browser
+stores its checklist data locally and does not expose those reminder endpoints.
 
-Wait for the server event `speech_to_text.ready` before sending audio. Send
-mono, signed PCM16 audio at 16 kHz, base64-encoded in JSON. Commit each audio
-turn when speech ends. The backend emits `speech_to_text.interim_transcript`
-updates while you speak and a `speech_to_text.transcript` event when Gemini
-finalizes the text.
+On an event page, **Talk to PackPal** records one conversation until you finish
+it. Gemini can mark existing items packed or unpacked, add an item to an
+existing category (such as Clothes or Documents), remove an existing item,
+create or delete a list, add an event-relative reminder, or update the current
+event's location or start time. Requested item/list actions are applied only
+when their category and item names match the current event; ambiguous or
+duplicate changes are skipped. The assistant speaks its reply when browser
+speech synthesis is available.
+Say **“I’m done”** to submit a voice request automatically. The end phrase is
+removed before the request is interpreted. Silence detection is disabled for
+this conversation flow because background noise made it unreliable; use
+**Submit now** as a manual fallback.
 
-```json
-{"type":"input_audio_buffer.append","audio":"<base64 PCM16 audio>"}
-{"type":"input_audio_buffer.commit"}
-```
+### Voice assistant command examples
 
-The backend does not accept session configuration from clients. The demo
-captures microphone audio, converts it to mono PCM16 at 16 kHz, and signals the
-end of the audio stream when you press **Stop**. The demo also saves those
-captured samples as a standard WAV file for browser playback, so you can review
-the same audio sent for transcription.
+| Say | Action |
+|---|---|
+| “Pack my passport. I’m done.” | Check off the matching existing item as packed. |
+| “Unpack the dress shoes. I’m done.” | Uncheck the matching item as unpacked. |
+| “Add a nationalization document to Documents. I’m done.” | Add an item to the existing Documents list. |
+| “Remove the reference letters from Documents. I’m done.” | Remove the matching item from Documents. |
+| “Create a new list called Toiletries. I’m done.” | Add an empty Toiletries list to the current event. |
+| “Delete the Toiletries list. I’m done.” | Delete that list and all its event items. |
+| “Remind me 3 hours and 20 minutes before the event. I’m done.” | Add a reminder 200 minutes before the event. |
+| “Remind me 2 weeks before the event. I’m done.” | Add a reminder 20,160 minutes before the event. |
+| “Remind me about this event. I’m done.” | Add the default reminder one day (1,440 minutes) before the event. |
+| “The location is the Boston Garden. I’m done.” | Set the current event location to Boston Garden. |
+| “The event starts at 7 PM on May 12. I’m done.” | Update the current event start date and time. |
 
-The backend uses Gemini's `gemini-3.5-transcribe-live` model. Create a Gemini
-API key in Google AI Studio and put it in your local `.env` file as
-`GEMINI_API_KEY`.
+Reminder offsets can be specified in minutes, hours, days, or weeks, including
+combinations such as “1 day and 3 hours.” They must fall after now and before
+the event start; if no offset is stated, the default is one day before. A
+reminder whose time has already passed, or a duplicate offset, is not added.
+Deleting a list removes its items from this event but does not delete a saved
+kit. Spoken location and time edits update the currently open event; they do
+not create a separate event.
 
-## Firebase reminders
+## Project layout
 
-The demo can turn the latest finalized transcript into a reminder proposal.
-You review and edit its title, details, and date/time before confirming; it
-does not schedule or save anything based only on speech. After saving, the
-reminder and source transcript are stored in Firestore under your signed-in
-Firebase account.
+- `src/components/` contains the browser's screens and controls.
+- `src/state/` contains the checklist state and local persistence.
+- `src/hooks/useDictation.js` connects microphone controls to speech-to-text.
+- `src/speech-to-text-client.js` and `public/audio-capture-worklet.js`
+  capture and stream microphone audio.
+- `server.js` serves the production build and handles speech and API requests.
 
-1. Create a Firebase project and register a Web app in the Firebase console.
-2. Enable **Authentication → Google** as a sign-in provider.
-3. Create a **Cloud Firestore** database.
-4. Copy the Firebase Web app configuration into `public/firebase-config.js`.
-   That config is visible in the browser by design; it is not a private key.
-5. Add the Firebase project ID to `.env` as `FIREBASE_PROJECT_ID`, then restart
-   the server. Keep `GEMINI_API_KEY` in `.env` only.
-6. Publish the included [Firestore security rules](./firestore.rules) in
-   **Firestore → Rules**. They restrict reminders to their owner's account.
-7. In **Authentication → Settings → Authorized domains**, ensure `localhost`
-   is allowed for local development.
-
-On the page, sign in with Google, record and finish a transcript, choose
-**Interpret latest transcript as a reminder**, review the suggested details,
-and press **Confirm and save reminder**. Saved reminders appear in the list and
-can be marked done or deleted. The backend verifies Firebase ID tokens before
-calling Gemini to interpret transcript text.
-
-For production, serve the site over HTTPS, restrict Firebase API key usage to
-your app's domains, review Firebase's usage limits, and add appropriate
-authentication/rate limits for the deployed backend.
-
-The microphone client is implemented as a reusable module in
-`public/speech-to-text-client.js`; the demo UI is kept separate in
-`public/app.js` and `public/index.html`. This lets an eventual application
-reuse the audio/WebSocket client while replacing the temporary UI.
-
-The demo requires microphone permission and a secure browser context (localhost
-is allowed). Protect `/speech-to-text` with your application's existing
-authentication and authorization before exposing it publicly. The health
-endpoint does not require authentication. Never put `GEMINI_API_KEY` in client
-code.
+Build the browser with `npm run build`, run tests with `npm test`, and serve a
+production build with `npm start`.

@@ -1,0 +1,148 @@
+/* ===========================================================================
+   PAGE-LEVEL VIEWS: event header, events list, calendar strip, kits,
+   settings, empty state
+   =========================================================================== */
+.page__title { font-size: var(--fs-xl); font-weight: 800; margin: 0; }
+
+/* ---- Event header -------------------------------------------------------- */
+.evhead__card { position: relative; }
+.evhead__title { font-size: var(--fs-2xl); font-weight: 800; margin: 0 0 var(--sp-2); overflow-wrap: anywhere; }
+.evhead--compact .evhead__title { font-size: var(--fs-lg); }
+
+.evhead__meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+  margin: 0; color: var(--ink-soft); font-size: var(--fs-sm); font-weight: 600;
+}
+.evhead__chunk { display: inline-flex; align-items: center; gap: var(--sp-2); }
+/* Monospace for times: digits line up and a slashed zero is unambiguous. */
+.evhead__mono { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+.evhead__rel {
+  padding: 1px var(--sp-2); border-radius: 999px;
+  background: var(--tape); color: var(--ink); font-weight: 700; font-size: var(--fs-xs);
+}
+.evhead__tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
+
+/* ---- Priority banner ----------------------------------------------------- */
+.priority {
+  background: var(--warn);
+  border: 1px solid var(--warn-edge);
+  border-left: 6px solid var(--warn-edge);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+}
+.priority__title {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-md); font-weight: 800; margin: 0 0 var(--sp-2);
+}
+.priority__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1); }
+.priority__item {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2);
+  width: 100%; min-height: var(--target-min);
+  padding: var(--sp-2); text-align: left;
+  background: rgba(255,255,255,.5);
+  border: 1px solid var(--warn-edge); border-radius: var(--radius-sm);
+  font-size: var(--fs-sm); cursor: pointer;
+}
+.priority__cat { margin-left: auto; font-size: var(--fs-xs); font-weight: 700; opacity: .75; }
+
+/* ---- Add-a-list ---------------------------------------------------------- */
+.newlist__trigger { width: 100%; border-style: dashed; }
+.newlist { border-style: dashed; }
+
+/* ---- Events list --------------------------------------------------------- */
+.eventlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
+.eventlist__row { display: flex; flex-direction: column; gap: var(--sp-3); }
+.eventlist__progress { display: flex; align-items: center; gap: var(--sp-3); margin: 0; }
+.eventlist__bar {
+  flex: 1; height: 10px; border-radius: 999px; overflow: hidden;
+  background: rgba(43,38,34,.1); border: 1px solid var(--card-edge);
+}
+.eventlist__bar span { display: block; height: 100%; background: var(--success); }
+.eventlist__count { font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 700; white-space: nowrap; }
+.eventlist__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* ---- Month strip --------------------------------------------------------- */
+.month__bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.month__label { font-size: var(--fs-md); font-weight: 800; }
+.month__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month__dow { text-align: center; font-size: var(--fs-xs); font-weight: 800; color: var(--ink-soft); padding-bottom: 4px; }
+.month__day {
+  position: relative;
+  display: grid; place-items: center;
+  min-height: 40px; border-radius: var(--radius-sm);
+  font-size: var(--fs-sm); color: var(--ink-soft);
+  background: none; border: 1px solid transparent;
+}
+/* Days with events are bold AND dotted AND outlined - three signals, so the
+   information survives greyscale printing or low colour vision. */
+.month__day.has-event {
+  font-weight: 800; color: var(--ink); cursor: pointer;
+  background: var(--card); border-color: var(--ink);
+}
+.month__dot {
+  position: absolute; bottom: 5px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--success);
+}
+.month__day.is-today { box-shadow: inset 0 0 0 2px var(--tape); }
+
+/* ---- Event form ---------------------------------------------------------- */
+.eventform { display: flex; flex-direction: column; gap: var(--sp-3); }
+.eventform__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.eventform__kits { border: 1px dashed var(--rule); border-radius: var(--radius-sm); padding: var(--sp-3); }
+.eventform__kits legend { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); padding: 0 var(--sp-2); }
+.eventform__kit { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--target-min); cursor: pointer; }
+.eventform__kitcount { color: var(--ink-soft); font-size: var(--fs-sm); }
+
+/* ---- Kits ---------------------------------------------------------------- */
+.kit__name { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-lg); }
+.kit__items { list-style: none; margin: var(--sp-3) 0; padding: 0; }
+.kit__items li { padding: var(--sp-2) 0; border-bottom: 1px dashed var(--rule); font-size: var(--fs-sm); }
+.kit__items li:last-child { border-bottom: none; }
+.kit__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: end; margin-top: var(--sp-3); }
+.kit__apply { flex: 1; min-width: 200px; }
+
+/* ---- Settings ------------------------------------------------------------ */
+.choices { border: none; padding: 0; margin: 0 0 var(--sp-4); display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.choices legend { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); margin-bottom: var(--sp-2); }
+.choice {
+  display: flex; align-items: center; gap: var(--sp-2);
+  min-height: var(--target-min); padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--card-edge); border-radius: var(--radius-md);
+  cursor: pointer; flex: 1 1 180px;
+}
+.choice.is-on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.choice span { display: flex; flex-direction: column; }
+.choice__hint { font-size: var(--fs-xs); color: var(--ink-soft); }
+
+.toggle {
+  display: flex; align-items: flex-start; gap: var(--sp-3);
+  min-height: var(--target-min); padding: var(--sp-2) 0; cursor: pointer;
+}
+.toggle input { width: 22px; height: 22px; accent-color: var(--ink); margin-top: 2px; flex: none; }
+.toggle__text { display: flex; flex-direction: column; }
+.toggle__hint { font-size: var(--fs-sm); color: var(--ink-soft); }
+.toggle.is-disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---- Empty state --------------------------------------------------------- */
+.empty {
+  position: relative;
+  max-width: 560px; margin: 8vh auto 0;
+  background: var(--card); border: 1px solid var(--card-edge);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  padding: var(--sp-7) var(--sp-5);
+  text-align: center;
+}
+.empty__title { font-size: var(--fs-2xl); font-weight: 800; margin: 0 0 var(--sp-2); }
+.empty__sub { color: var(--ink-soft); margin: 0 auto var(--sp-6); max-width: 38ch; }
+/* The one oversized control: full width, 120px tall, impossible to miss. */
+.empty__cta {
+  width: 100%; min-height: 120px;
+  flex-direction: column; gap: var(--sp-2);
+  font-size: var(--fs-xl);
+  border-radius: var(--radius-lg);
+}
+.empty__secondary { margin-top: var(--sp-4); }
+
+@media (max-width: 560px) {
+  .eventform__grid { grid-template-columns: 1fr; }
+}
