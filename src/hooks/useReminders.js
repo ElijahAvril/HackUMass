@@ -49,7 +49,7 @@ export function useReminders(events, enabled, onFire) {
             : 'Everything is packed. You are good to go.'
 
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(`PackPal - ${event.title}`, {
+            new Notification(`Packuroo - ${event.title}`, {
               body,
               icon: '/icons/icon-192.png',
               tag: `${event.id}-${reminder.id}`, // replaces rather than stacks

@@ -39,7 +39,7 @@ export function EmptyState() {
 
       <h1 className="empty__title">Nothing to pack yet</h1>
       <p className="empty__sub">
-        Start a list now, or add an event and PackPal will remind you before it.
+        Start a list now, or add an event and Packuroo will remind you before it.
       </p>
 
       {/* The oversized, single, obvious action. */}

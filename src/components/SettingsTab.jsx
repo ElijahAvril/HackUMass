@@ -161,7 +161,7 @@ export function SettingsTab() {
         <button
           type="button" className="btn" style={{ marginTop: 'var(--sp-3)' }}
           disabled={!speech.supported}
-          onClick={() => speech.speak('PackPal will read your list like this.')}
+          onClick={() => speech.speak('Packuroo will read your list like this.')}
         >
           <Icon name="speaker" size={18} /> Test the voice
         </button>
@@ -189,7 +189,7 @@ export function SettingsTab() {
           }}
         />
         <p className="panel__hint">
-          Alerts arrive while PackPal is open. Background delivery needs a push
+          Alerts arrive while Packuroo is open. Background delivery needs a push
           server — see the note in <code>src/hooks/useReminders.js</code>.
         </p>
       </section>

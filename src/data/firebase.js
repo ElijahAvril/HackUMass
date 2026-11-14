@@ -37,7 +37,7 @@ function makeDb(firebaseApp) {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     })
   } catch (err) {
-    console.warn('[PackPal] Offline cache unavailable, using online-only mode.', err)
+    console.warn('[Packuroo] Offline cache unavailable, using online-only mode.', err)
     return getFirestore(firebaseApp)
   }
 }

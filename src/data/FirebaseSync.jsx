@@ -44,7 +44,7 @@ export function FirebaseSync({ uid, children }) {
     let cancelled = false
 
     const fail = (err) => {
-      console.error('[PackPal] Sync error', err)
+      console.error('[Packuroo] Sync error', err)
       setError(err?.code === 'permission-denied'
         ? 'Your lists could not be opened (permission denied). Check the Firestore security rules.'
         : 'Your lists could not be loaded. Check your connection and refresh the page.')
@@ -110,7 +110,7 @@ export function FirebaseSync({ uid, children }) {
     if (!ready) return
     const k = known.current
     const report = (err) => {
-      console.error('[PackPal] Save failed', err)
+      console.error('[Packuroo] Save failed', err)
       actions.announce('Could not save to the cloud. Your change is kept on this device.')
     }
 

@@ -2,7 +2,7 @@
 // AUTH GATE - decides what to show before the app itself
 // ---------------------------------------------------------------------------
 //   Firebase keys missing      -> the app, saving in this browser only
-//   checking who's signed in   -> "Opening PackPal…"
+//   checking who's signed in   -> "Opening Packuroo…"
 //   nobody signed in           -> the login screen
 //   signed in                  -> FirebaseSync, then the app
 //
@@ -39,7 +39,7 @@ export function AuthGate({ children }) {
   }, [user, actions])
 
   if (!firebaseReady) return children
-  if (user === undefined) return <Splash title="Opening PackPal…" />
+  if (user === undefined) return <Splash title="Opening Packuroo…" />
   if (!user) return <LoginScreen />
 
   return (

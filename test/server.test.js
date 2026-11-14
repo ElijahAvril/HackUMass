@@ -87,10 +87,10 @@ test("proxies live PCM audio to Gemini and normalizes transcription events", asy
   const browserResponse = await fetch(`http://127.0.0.1:${servicePort}/`);
   assert.equal(browserResponse.status, 200);
   const browserHtml = await browserResponse.text();
-  assert.match(browserHtml, /PackPal/);
+  assert.match(browserHtml, /Packuroo/);
   assert.doesNotMatch(browserHtml, /Live speech-to-text demo/);
   const bundlePath = browserHtml.match(/src="([^"]+\.js)"/)?.[1];
-  assert.ok(bundlePath, "built PackPal JavaScript should be linked from the page");
+  assert.ok(bundlePath, "built Packuroo JavaScript should be linked from the page");
   const bundleResponse = await fetch(
     `http://127.0.0.1:${servicePort}${bundlePath}`
   );

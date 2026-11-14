@@ -22,7 +22,7 @@ export default defineConfig({
       // installability without doing a production build every time.
       devOptions: { enabled: true },
 
-      // Files that get precached for offline use. PackPal is offline-first:
+      // Files that get precached for offline use. Packuroo is offline-first:
       // all data lives in localStorage, so once cached the app works on a plane.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff,woff2}'],
@@ -31,8 +31,8 @@ export default defineConfig({
       // ---- Web app manifest ------------------------------------------------
       // This is what makes "Add to Home Screen" / "Install app" appear.
       manifest: {
-        name: 'PackPal',
-        short_name: 'PackPal',
+        name: 'Packuroo',
+        short_name: 'Packuroo',
         description:
           'Per-event packing checklists with saved kits, built to be accessible.',
         start_url: '/',

@@ -30,7 +30,7 @@ export function Sidebar() {
       {/* Wordmark is hidden on mobile where the bottom bar has no room. */}
       <div className="sidebar__brand">
         <span className="sidebar__mark" aria-hidden="true"><Icon name="bag" size={22} /></span>
-        <span className="sidebar__name">PackPal</span>
+        <span className="sidebar__name">Packuroo</span>
       </div>
 
       <ul className="sidebar__list">

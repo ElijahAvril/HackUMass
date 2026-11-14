@@ -5,7 +5,7 @@
 // an app this size a reducer is less code and zero dependencies.
 //
 // WHY A REDUCER AND NOT useState EVERYWHERE:
-//   Every mutation in PackPal is listed in ONE switch statement below. When a
+//   Every mutation in Packuroo is listed in ONE switch statement below. When a
 //   teammate asks "what can change an item?", the answer is a single file they
 //   can read in two minutes. Adding a feature = add a case + add a dispatcher.
 //
@@ -57,7 +57,7 @@ function loadInitialState() {
       ui: { ...fallback.ui, ...(saved.ui || {}), packingEventId: null },
     }
   } catch (err) {
-    console.warn('[PackPal] Could not read saved state, starting fresh.', err)
+    console.warn('[Packuroo] Could not read saved state, starting fresh.', err)
     return fallback
   }
 }
@@ -265,7 +265,7 @@ function reducer(state, action) {
                ui: { tab: 'events', openEventId: null, packingEventId: null, announcement: 'All events cleared' } }
 
     default:
-      console.warn('[PackPal] Unknown action:', action.type)
+      console.warn('[Packuroo] Unknown action:', action.type)
       return state
   }
 }
@@ -280,7 +280,7 @@ export function StoreProvider({ children }) {
   // would add a failure mode (lost writes on a fast close).
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
-    catch (err) { console.warn('[PackPal] Could not save state.', err) }
+    catch (err) { console.warn('[Packuroo] Could not save state.', err) }
   }, [state])
 
   // Push the accessibility settings onto <html> so tokens.css can react.

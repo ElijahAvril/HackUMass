@@ -55,7 +55,7 @@ export function friendlyAuthError(err) {
     'auth/operation-not-allowed': 'This sign-in option is turned off in Firebase (Authentication → Sign-in method).',
     'auth/configuration-not-found': 'Sign-in is not set up yet in Firebase (Authentication → Get started).',
     'auth/unauthorized-domain': 'This website address is not allowed to sign in yet (Authentication → Settings → Authorized domains).',
-    'auth/credential-already-in-use': 'That Google account already has PackPal lists. Sign out, then sign in with Google to open them.',
+    'auth/credential-already-in-use': 'That Google account already has Packuroo lists. Sign out, then sign in with Google to open them.',
     'auth/too-many-requests': 'Too many tries in a row. Wait a minute and try again.',
   }
   return messages[err?.code] || 'Something went wrong signing in. Please try again.'

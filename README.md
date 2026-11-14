@@ -1,6 +1,6 @@
-# PackPal
+# Packuroo
 
-PackPal is an accessible, installable packing-checklist PWA. Each event has
+Packuroo is an accessible, installable packing-checklist PWA. Each event has
 its own packing list, and repeat lists can be saved as reusable kits. Checklist
 data is stored locally in the browser.
 
@@ -35,7 +35,7 @@ commands. The browser streams mono PCM16 audio at 16 kHz to the
 returns interim and finalized transcripts. The reusable browser client is in
 `src/speech-to-text-client.js`.
 
-On an event page, **Talk to PackPal** records a conversation until you say
+On an event page, **Talk to Packuroo** records a conversation until you say
 **“I’m done”** or press **Submit now**. Gemini can:
 
 | Say | Action |
@@ -70,7 +70,7 @@ npm start         # Build and serve the app and backend at http://localhost:3000
 ## Firebase status
 
 Firebase client helper files and backend reminder interpretation support are
-present, but the current PackPal checklist UI stores its data locally and does
+present, but the current Packuroo checklist UI stores its data locally and does
 not yet sync checklist data or saved reminders through Firebase. The Gemini
 speech and packing assistant work with `GEMINI_API_KEY`; Firebase is not needed
 for those features.
@@ -79,7 +79,7 @@ for those features.
 
 ```text
 src/
-  components/           PackPal screens and controls
+  components/           Packuroo screens and controls
   hooks/                Speech, dictation, and reminder hooks
   state/                Checklist state, seed data, and selectors
   styles/               Shared styles and design tokens

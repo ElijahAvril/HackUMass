@@ -1,9 +1,9 @@
 {
-  "name": "hackumass-packpal-speech-to-text",
+  "name": "packuroo",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "PackPal browser with Gemini speech-to-text support.",
+  "description": "Packuroo browser with Gemini speech-to-text support.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

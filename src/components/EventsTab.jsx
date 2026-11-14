@@ -2,7 +2,7 @@
 // EVENTS TAB - every event, plus the form to add one
 // ---------------------------------------------------------------------------
 // This tab replaces the "Agenda" idea from the first sketch. The difference is
-// not cosmetic: an agenda implies a fixed time grid, whereas PackPal cares
+// not cosmetic: an agenda implies a fixed time grid, whereas Packuroo cares
 // about the ORDER of what's coming and how ready each one is. So each row
 // carries a progress summary, which a calendar grid has no room for.
 //

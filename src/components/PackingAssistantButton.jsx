@@ -293,7 +293,7 @@ export function PackingAssistantButton({ event }) {
         {phase === 'starting' ? 'Connecting…'
           : phase === 'recording' ? 'Submit now'
             : phase === 'processing' ? 'Gemini is thinking…'
-              : 'Talk to PackPal'}
+              : 'Talk to Packuroo'}
       </button>
       {message ? <p className="packing-assistant__message" role="status">{message}</p> : null}
       {phase === 'recording' ? (

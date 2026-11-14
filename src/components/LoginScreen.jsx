@@ -10,14 +10,14 @@ import { Icon } from './Icon.jsx'
 import { signInWithGoogle, signInAsGuest, friendlyAuthError } from '../data/auth.js'
 import './Login.css'
 
-/** Centered card for "Opening PackPal…", "Loading your lists…" and errors. */
+/** Centered card for "Opening Packuroo…", "Loading your lists…" and errors. */
 export function Splash({ title, message }) {
   return (
     <main id="main" className="login">
       <section className="card login__card login__card--small" role="status" aria-live="polite">
         <span className="tape tape--left" aria-hidden="true" />
         <div className="login__brand">
-          <span className="sidebar__mark" aria-hidden="true"><Icon name="bag" size={20} /></span> PackPal
+          <span className="sidebar__mark" aria-hidden="true"><Icon name="bag" size={20} /></span> Packuroo
         </div>
         <h1 className="login__splash">{title}</h1>
         {message ? <p className="login__sub">{message}</p> : <span className="login__spinner" aria-hidden="true" />}
@@ -49,7 +49,7 @@ export function LoginScreen() {
 
         <div className="login__brand">
           <span className="sidebar__mark" aria-hidden="true"><Icon name="bag" size={22} /></span>
-          PackPal
+          Packuroo
         </div>
 
         <h1 className="login__title" id="login-title" tabIndex={-1} ref={headingRef}>
@@ -91,7 +91,7 @@ export function LoginScreen() {
         </ul>
 
         <p className="login__fine">
-          PackPal only uses your Google name and email to keep your lists private to you.
+          Packuroo only uses your Google name and email to keep your lists private to you.
         </p>
       </section>
     </main>
