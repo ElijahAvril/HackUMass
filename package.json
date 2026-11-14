@@ -1,0 +1,25 @@
+{
+  "name": "hackumass-speech-to-text",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild public/app.js --bundle --outfile=public/app.bundle.js --format=esm --platform=browser --target=es2022",
+    "start": "npm run build && node server.js",
+    "pretest": "npm run build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.10",
+    "express": "^5.1.0",
+    "firebase": "^13.3.0",
+    "jose": "^6.2.17",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.7"
+  }
+}
