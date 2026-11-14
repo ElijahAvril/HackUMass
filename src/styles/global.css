@@ -181,6 +181,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
 .packing-assistant__transcription p { margin: var(--sp-1) 0 0; }
 /* Lighter than real text, but still readable (about 5.8:1 contrast). */
 .packing-assistant__transcription p.is-placeholder { color: var(--ink-soft); }
+.packing-assistant__transcription strong { display: block; text-align: center; }
 
 /* Reminder banner that appears in-page when an alert fires while the app is
    open. role="status" means screen readers announce it without stealing focus. */
