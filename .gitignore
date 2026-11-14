@@ -1,4 +1,9 @@
 node_modules/
+dist/
+preview/
+dev-dist/
 .env
+*.local
+.DS_Store
 npm-debug.log*
 public/app.bundle.js

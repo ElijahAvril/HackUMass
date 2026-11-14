@@ -1,0 +1,54 @@
+/* Desktop: vertical rail of white pill buttons, active one inverted to ink. */
+.sidebar__brand {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: 0 var(--sp-2) var(--sp-4);
+}
+.sidebar__mark {
+  display: grid; place-items: center;
+  width: 38px; height: 38px;
+  background: var(--card); color: #B32C2C;
+  border: 1px solid var(--card-edge); border-radius: var(--radius-sm);
+}
+.sidebar__name { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); }
+
+.sidebar__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.sidebar__link {
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: 100%; min-height: var(--target-min);
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md);
+  color: var(--ink); background: var(--card);
+  border: 1px solid var(--card-edge); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  cursor: pointer; text-align: left;
+}
+.sidebar__link.is-active { background: var(--ink); color: #FFFDF7; border-color: var(--ink); }
+
+/* ---- Mobile: same markup becomes a fixed bottom tab bar ------------------
+   Bottom placement puts the controls in thumb reach, which matters when the
+   user is holding a bag in the other hand - the literal use case. */
+@media (max-width: 1080px) {
+  .sidebar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--card);
+    border-top: 1px solid var(--card-edge);
+    padding: var(--sp-2) var(--sp-2) calc(var(--sp-2) + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 18px rgba(43, 38, 34, .1);
+  }
+  .sidebar__brand { display: none; }
+  .sidebar__list { flex-direction: row; justify-content: space-around; gap: 0; }
+  .sidebar__link {
+    flex-direction: column; gap: 2px;
+    padding: var(--sp-1) var(--sp-2);
+    font-size: var(--fs-xs);
+    background: transparent; border-color: transparent; box-shadow: none;
+    text-align: center;
+  }
+  .sidebar__link.is-active {
+    background: transparent; color: var(--ink);
+    border-color: transparent;
+    /* Active state on mobile uses an underline + weight, not just colour. */
+    box-shadow: inset 0 -3px 0 var(--ink);
+  }
+}
