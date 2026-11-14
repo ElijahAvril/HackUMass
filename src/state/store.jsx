@@ -25,6 +25,16 @@ const STORAGE_KEY = 'packpal.v1'
 // Tries localStorage first so your data survives a refresh (and works offline),
 // falling back to the seed. The try/catch matters: a corrupted or
 // schema-changed blob should never white-screen the app mid-demo.
+/** A fresh copy of the demo data - what a brand-new device starts with. */
+function freshState() {
+  return {
+    events: seedEvents,
+    kits: seedKits,
+    settings: seedSettings,
+    ui: { tab: 'next', openEventId: null, packingEventId: null, announcement: '' },
+  }
+}
+
 function loadInitialState() {
   const fallback = {
     events: seedEvents,
@@ -75,6 +85,14 @@ function reducer(state, action) {
     case 'OPEN_EVENT':
       return { ...state, ui: { ...state.ui, tab: 'next', openEventId: action.eventId } }
 
+    // "New event" from anywhere: jump to the Events tab with the form open,
+    // optionally with a date already filled in (from the Calendar tab).
+    case 'OPEN_NEW_EVENT':
+      return { ...state, ui: { ...state.ui, tab: 'events', newEvent: { date: action.date || '' } } }
+
+    case 'CLEAR_NEW_EVENT':
+      return { ...state, ui: { ...state.ui, newEvent: null } }
+
     case 'START_PACKING':
       return { ...state, ui: { ...state.ui, packingEventId: action.eventId } }
 
@@ -116,6 +134,12 @@ function reducer(state, action) {
         },
       }
 
+    case 'UPDATE_EVENT':
+      return mapEvent(state, action.eventId, (event) => ({
+        ...event,
+        ...action.patch,
+      }))
+
     // ---- Categories -------------------------------------------------------
     case 'ADD_CATEGORY':
       return mapEvent(state, action.eventId, (e) => ({
@@ -134,7 +158,7 @@ function reducer(state, action) {
         mapCategory(e, action.categoryId, (c) => ({
           ...c,
           items: [...c.items, {
-            id: uid('it'),
+            id: action.itemId || uid('it'),
             name: action.name,
             note: action.note || '',       // the "where it's kept" line
             packed: false,
@@ -219,6 +243,23 @@ function reducer(state, action) {
     case 'ANNOUNCE':
       return { ...state, ui: { ...state.ui, announcement: action.message } }
 
+    // ---- Cloud sync (see src/data/FirebaseSync.jsx) -----------------------
+    // Replaces whichever parts arrived from Firestore. Settings are merged so
+    // device-only ones (notification permission) are kept.
+    case 'LOAD_REMOTE':
+      return {
+        ...state,
+        events: action.events ?? state.events,
+        kits: action.kits ?? state.kits,
+        settings: action.settings
+          ? { ...state.settings, ...action.settings, notifications: state.settings.notifications }
+          : state.settings,
+      }
+
+    // After sign-out: back to the demo data, so a shared device is clean.
+    case 'RESET_TO_SEED':
+      return freshState()
+
     case 'RESET_ALL':
       return { events: [], kits: state.kits, settings: state.settings,
                ui: { tab: 'events', openEventId: null, packingEventId: null, announcement: 'All events cleared' } }
@@ -258,10 +299,13 @@ export function StoreProvider({ children }) {
     setTab: (tab, eventId) => dispatch({ type: 'SET_TAB', tab, eventId }),
     openEvent: (eventId) => dispatch({ type: 'OPEN_EVENT', eventId }),
     startPacking: (eventId) => dispatch({ type: 'START_PACKING', eventId }),
+    openNewEvent: (date) => dispatch({ type: 'OPEN_NEW_EVENT', date }),
+    clearNewEvent: () => dispatch({ type: 'CLEAR_NEW_EVENT' }),
     stopPacking: () => dispatch({ type: 'STOP_PACKING' }),
 
     addEvent: (payload) => dispatch({ type: 'ADD_EVENT', ...payload }),
     removeEvent: (eventId) => dispatch({ type: 'REMOVE_EVENT', eventId }),
+    updateEvent: (eventId, patch) => dispatch({ type: 'UPDATE_EVENT', eventId, patch }),
 
     addCategory: (eventId, name) => dispatch({ type: 'ADD_CATEGORY', eventId, name }),
     // Copies a kit's items into an event as a new category, in ONE dispatch.
@@ -277,8 +321,8 @@ export function StoreProvider({ children }) {
     }),
     removeCategory: (eventId, categoryId) => dispatch({ type: 'REMOVE_CATEGORY', eventId, categoryId }),
 
-    addItem: (eventId, categoryId, name, note) =>
-      dispatch({ type: 'ADD_ITEM', eventId, categoryId, name, note }),
+    addItem: (eventId, categoryId, name, note, itemId) =>
+      dispatch({ type: 'ADD_ITEM', eventId, categoryId, name, note, itemId }),
     removeItem: (eventId, categoryId, itemId) =>
       dispatch({ type: 'REMOVE_ITEM', eventId, categoryId, itemId }),
     toggleItem: (eventId, categoryId, itemId, packed) =>
@@ -298,6 +342,8 @@ export function StoreProvider({ children }) {
     setSetting: (key, value) => dispatch({ type: 'SET_SETTING', key, value }),
     announce: (message) => dispatch({ type: 'ANNOUNCE', message }),
     resetAll: () => dispatch({ type: 'RESET_ALL' }),
+    loadRemote: (data) => dispatch({ type: 'LOAD_REMOTE', ...data }),
+    resetToSeed: () => dispatch({ type: 'RESET_TO_SEED' }),
   }), [])
 
   const value = useMemo(() => ({ state, actions }), [state, actions])

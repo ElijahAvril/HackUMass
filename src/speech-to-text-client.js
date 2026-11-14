@@ -63,12 +63,20 @@ export class SpeechToTextClient {
     url = `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/speech-to-text`,
     onEvent = () => {},
     onStatus = () => {},
-    onError = () => {}
+    onError = () => {},
+    onSilence = () => {},
+    silenceDurationMs = 1500,
+    vadCalibrationMs = 600,
+    autoSubmitOnSilence = true
   } = {}) {
     this.url = url;
     this.onEvent = onEvent;
     this.onStatus = onStatus;
     this.onError = onError;
+    this.onSilence = onSilence;
+    this.silenceDurationMs = silenceDurationMs;
+    this.vadCalibrationMs = vadCalibrationMs;
+    this.autoSubmitOnSilence = autoSubmitOnSilence;
     this.socket = null;
     this.stream = null;
     this.recordingChunks = [];
@@ -78,6 +86,11 @@ export class SpeechToTextClient {
     this.capturing = false;
     this.flushResolver = null;
     this.connectionPromise = null;
+    this.silenceTimer = null;
+    this.detectedSpeech = false;
+    this.noiseFloor = 0.003;
+    this.calibrationElapsedMs = 0;
+    this.calibrationLevels = [];
   }
 
   async start() {
@@ -103,7 +116,7 @@ export class SpeechToTextClient {
         throw new Error("The audio device could not be started.");
       }
       await this.context.audioWorklet.addModule(
-        new URL("./audio-capture-worklet.js", import.meta.url)
+        new URL("/audio-capture-worklet.js", location.origin)
       );
       this.source = this.context.createMediaStreamSource(this.stream);
       this.worklet = new AudioWorkletNode(this.context, "pcm-resampler", {
@@ -116,6 +129,7 @@ export class SpeechToTextClient {
       });
       this.worklet.port.onmessage = (event) => {
         if (event.data.type === "audio") {
+          this.detectSpeech(event.data.samples);
           const audioBytes = encodePcm16(event.data.samples);
           this.recordingChunks.push(audioBytes);
           this.send({
@@ -128,6 +142,11 @@ export class SpeechToTextClient {
         }
       };
       this.recordingChunks = [];
+      this.detectedSpeech = false;
+      this.noiseFloor = 0.003;
+      this.calibrationElapsedMs = 0;
+      this.calibrationLevels = [];
+      this.clearSilenceTimer();
       this.source.connect(this.worklet);
       this.worklet.connect(this.context.destination);
       this.capturing = true;
@@ -144,6 +163,7 @@ export class SpeechToTextClient {
     }
 
     this.capturing = false;
+    this.clearSilenceTimer();
     this.source?.disconnect();
     const flush = new Promise((resolve) => {
       this.flushResolver = resolve;
@@ -264,6 +284,7 @@ export class SpeechToTextClient {
   }
 
   async releaseAudio() {
+    this.clearSilenceTimer();
     this.source?.disconnect();
     this.worklet?.disconnect();
     this.source = null;
@@ -274,5 +295,66 @@ export class SpeechToTextClient {
       await this.context.close();
     }
     this.context = null;
+  }
+
+  detectSpeech(samples) {
+    if (!this.autoSubmitOnSilence || !this.capturing || samples.length === 0) {
+      return;
+    }
+
+    let energy = 0;
+    for (const sample of samples) {
+      energy += sample * sample;
+    }
+    const rms = Math.sqrt(energy / samples.length);
+    const chunkDurationMs = (samples.length / TARGET_SAMPLE_RATE) * 1000;
+
+    if (this.calibrationElapsedMs < this.vadCalibrationMs) {
+      this.calibrationElapsedMs += chunkDurationMs;
+      this.calibrationLevels.push(rms);
+      if (this.calibrationElapsedMs >= this.vadCalibrationMs) {
+        const sortedLevels = [...this.calibrationLevels].sort((a, b) => a - b);
+        const ambientIndex = Math.floor((sortedLevels.length - 1) * 0.2);
+        this.noiseFloor = Math.min(sortedLevels[ambientIndex] ?? 0, 0.02);
+        this.calibrationLevels = [];
+        if (rms > this.speechThreshold()) {
+          this.markSpeech();
+        }
+      }
+      return;
+    }
+
+    const threshold = this.speechThreshold();
+    if (rms < threshold) {
+      this.noiseFloor += (rms - this.noiseFloor) * 0.05;
+    }
+    if (rms > this.speechThreshold()) {
+      this.markSpeech();
+    }
+  }
+
+  speechThreshold() {
+    return Math.min(0.045, Math.max(0.012, this.noiseFloor * 1.5 + 0.01));
+  }
+
+  markSpeech() {
+    if (!this.detectedSpeech) {
+      this.detectedSpeech = true;
+    }
+    this.clearSilenceTimer();
+    this.silenceTimer = setTimeout(() => {
+      this.silenceTimer = null;
+      if (this.capturing && this.detectedSpeech) {
+        this.detectedSpeech = false;
+        this.onSilence();
+      }
+    }, this.silenceDurationMs);
+  }
+
+  clearSilenceTimer() {
+    if (this.silenceTimer !== null) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
   }
 }

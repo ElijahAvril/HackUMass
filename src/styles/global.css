@@ -14,11 +14,10 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   background: var(--paper);
-  /* Faint paper fibre texture, drawn with gradients so there's no image to
-     download (keeps the offline bundle small). */
-  background-image:
-    radial-gradient(circle at 20% 10%, rgba(255,255,255,.35) 0, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(140,120,90,.08) 0, transparent 50%);
+  /* Faint ruled lines, like a notebook page. Drawn with a gradient so there's
+     no image to download (keeps the offline bundle small). */
+  background-image: repeating-linear-gradient(
+    180deg, transparent 0 6px, var(--paper-line) 6px 7px);
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--fs-md);
@@ -70,9 +69,9 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
 /* The washi tape strip. Purely decorative, so it's aria-hidden in markup. */
 .tape {
   position: absolute;
-  width: 112px; height: 26px;
+  width: 76px; height: 22px;
   background: var(--tape);
-  opacity: .9;
+  opacity: .8;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
 }
 .tape--left  { top: -12px; left: 36px;  transform: rotate(-2.5deg); }
@@ -89,17 +88,20 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
   font-family: var(--font-display);
   font-size: var(--fs-md); font-weight: 700;
   border-radius: var(--radius-md);
-  border: 1px solid var(--card-edge);
+  border: 1.5px solid var(--ink);
   background: var(--card); color: var(--ink);
+  box-shadow: var(--shadow-btn);
   cursor: pointer;
-  transition: transform .12s ease, box-shadow .12s ease;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
 }
-.btn:hover  { box-shadow: var(--shadow-card); }
-.btn:active { transform: translateY(1px); }
+.btn:hover  { background: #FFF; }
+.btn:active { transform: translateY(1px); box-shadow: none; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-.btn--primary { background: var(--ink); color: #FFFDF7; border-color: var(--ink); }
-.btn--ghost   { background: transparent; border-color: transparent; }
+.btn--primary { background: var(--dark); color: var(--dark-ink); border-color: var(--dark); }
+.btn--primary:hover { background: #3A3029; }
+.btn--ghost   { background: transparent; border-color: transparent; box-shadow: none; }
+.btn--ghost:hover { background: rgba(255,255,255,.6); border-color: var(--card-edge); }
 .btn--danger  { color: #8C2F2F; }
 
 /* Big CTA used by the empty state - same component, bigger scale. */
@@ -115,7 +117,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
   width: 100%;
   padding: var(--sp-2) var(--sp-3);
   font-family: var(--font-body); font-size: var(--fs-md); color: var(--ink);
-  background: #FFF; border: 1px solid var(--card-edge);
+  background: #FFF; border: 1.5px solid var(--card-edge);
   border-radius: var(--radius-sm);
 }
 .textarea { min-height: 64px; resize: vertical; }
@@ -128,7 +130,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
    re-ordering regions is one line, not a DOM rewrite. */
 .shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 320px;
+  grid-template-columns: 200px minmax(0, 1fr) 320px;
   grid-template-areas: 'nav main rail';
   gap: var(--sp-5);
   max-width: 1340px;
@@ -137,6 +139,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
   align-items: start;
 }
 .shell__nav  { grid-area: nav;  position: sticky; top: var(--sp-5); }
+/* Screens without the right-hand rail (Events, Calendar, Kits, Settings)
+   give that space to the main column instead of leaving a gap. */
+.shell--norail { grid-template-columns: 200px minmax(0, 1fr); grid-template-areas: 'nav main'; }
+/* Two-column layout used INSIDE a screen: content + a side card. */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--sp-5); align-items: start; }
+@media (max-width: 1080px) { .split { grid-template-columns: minmax(0, 1fr); } }
 .shell__main { grid-area: main; min-width: 0; }
 .shell__rail { grid-area: rail; position: sticky; top: var(--sp-5);
                display: flex; flex-direction: column; gap: var(--sp-4); }
@@ -145,15 +153,32 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.15;
   .shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: 'main' 'rail';
-    padding-bottom: 96px;   /* clears the fixed bottom nav */
+    padding-bottom: 180px;  /* clears the bottom nav and the floating + button */
   }
-  .shell__nav  { position: static; }
+  /* The nav becomes a fixed bottom bar, so it must not hold a grid slot -
+     otherwise the grid adds an empty column and squeezes the content. */
+  .shell__nav  { display: contents; }
   .shell__rail { position: static; }
+  .shell--norail { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'main'; }
 }
 
 .stack  { display: flex; flex-direction: column; gap: var(--sp-4); }
 .row    { display: flex; align-items: center; gap: var(--sp-3); }
 .spacer { flex: 1; }
+
+.packing-assistant { display: flex; flex-direction: column; gap: var(--sp-2); }
+.packing-assistant__message,
+.packing-assistant__error { margin: 0; font-size: var(--fs-sm); }
+.packing-assistant__message { color: var(--ink-soft); }
+.packing-assistant__error { color: #8C2F2F; }
+.packing-assistant__transcription {
+  padding: var(--sp-3);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: var(--fs-sm);
+}
+.packing-assistant__transcription p { margin: var(--sp-1) 0 0; }
 
 /* Reminder banner that appears in-page when an alert fires while the app is
    open. role="status" means screen readers announce it without stealing focus. */

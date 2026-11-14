@@ -1,80 +1,97 @@
 // ---------------------------------------------------------------------------
 // SPEECH TO TEXT  (voice input)
 // ---------------------------------------------------------------------------
-// Wraps the Web Speech API's SpeechRecognition. Used two ways:
+// Streams microphone audio to the server's Gemini transcription service. Used two ways:
 //   * dictate an item name into the Add-item form (hands full of luggage)
 //   * voice commands in packing mode: "pack the blazer", "next", "what's left"
 //
-// Support is Chrome/Edge/Safari-ish. We feature-detect and the component hides
-// the mic button where unsupported, so there's no dead control in the UI.
+// The component hides the mic button when the required browser audio APIs are
+// unavailable, rather than rendering a control that cannot work.
 // ---------------------------------------------------------------------------
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-const Recognition =
-  typeof window !== 'undefined'
-    ? window.SpeechRecognition || window.webkitSpeechRecognition
-    : null
+import { SpeechToTextClient } from '../speech-to-text-client.js'
 
 export function useDictation({ onResult, continuous = false } = {}) {
-  const supported = Boolean(Recognition)
+  const supported = typeof window !== 'undefined'
+    && typeof navigator !== 'undefined'
+    && Boolean(navigator.mediaDevices?.getUserMedia)
+    && typeof window.AudioContext === 'function'
+    && typeof window.AudioWorkletNode === 'function'
+    && typeof window.WebSocket === 'function'
   const [listening, setListening] = useState(false)
-  const [transcript, setTranscript] = useState('')
   const [error, setError] = useState('')
-  const recognitionRef = useRef(null)
-  // Keeping the callback in a ref means re-rendering the parent doesn't tear
-  // down and rebuild the recogniser mid-sentence.
+  const clientRef = useRef(null)
+  const activeRef = useRef(false)
   const onResultRef = useRef(onResult)
-  useEffect(() => { onResultRef.current = onResult }, [onResult])
+  onResultRef.current = onResult
 
   useEffect(() => {
     if (!supported) return undefined
-    const recognition = new Recognition()
-    recognition.continuous = continuous
-    recognition.interimResults = true   // lets us show words as they're spoken
-    recognition.lang = 'en-US'
-
-    recognition.onresult = (event) => {
-      let finalText = ''
-      let interimText = ''
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        const result = event.results[i]
-        if (result.isFinal) finalText += result[0].transcript
-        else interimText += result[0].transcript
+    const client = new SpeechToTextClient({
+      onEvent(event) {
+        if (clientRef.current !== client) return
+        if (event.type === 'speech_to_text.transcript' && event.text?.trim()) {
+          onResultRef.current?.(event.text.trim())
+        } else if (event.type === 'error') {
+          activeRef.current = false
+          setListening(false)
+          setError(event.message || 'Speech recognition had a problem. Try again.')
+        }
+      },
+      onError(cause) {
+        if (clientRef.current !== client) return
+        activeRef.current = false
+        setListening(false)
+        setError(cause instanceof Error ? cause.message : 'Speech recognition had a problem. Try again.')
+      },
+      onStatus(message) {
+        if (clientRef.current !== client) return
+        if (message.startsWith('Disconnected')) {
+          activeRef.current = false
+          setListening(false)
+          setError(message)
+        }
       }
-      setTranscript(finalText || interimText)
-      if (finalText) onResultRef.current?.(finalText.trim())
+    })
+    clientRef.current = client
+    return () => {
+      clientRef.current = null
+      activeRef.current = false
+      void client.close().catch((cause) => {
+        console.error('Could not close the speech-to-text connection:', cause)
+      })
     }
+  }, [supported])
 
-    recognition.onerror = (event) => {
-      // 'no-speech' and 'aborted' are normal, not worth alarming the user about.
-      if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        setError(
-          event.error === 'not-allowed'
-            ? 'Microphone permission was blocked.'
-            : 'Voice input had a problem. Try again.'
-        )
-      }
+  const start = useCallback(async () => {
+    if (!supported || activeRef.current) return
+    activeRef.current = true
+    setError('')
+    setListening(true)
+    try {
+      await clientRef.current.start()
+    } catch (cause) {
+      activeRef.current = false
       setListening(false)
+      setError(cause instanceof Error ? cause.message : 'Voice input had a problem. Try again.')
     }
-    recognition.onend = () => setListening(false)
-
-    recognitionRef.current = recognition
-    return () => { recognition.abort() }
-  }, [supported, continuous])
-
-  const start = useCallback(() => {
-    if (!supported || listening) return
-    setError(''); setTranscript('')
-    try { recognitionRef.current?.start(); setListening(true) }
-    catch { /* start() throws if already running - safe to ignore */ }
-  }, [supported, listening])
+  }, [supported])
 
   const stop = useCallback(() => {
-    recognitionRef.current?.stop()
+    if (!activeRef.current) return
+    activeRef.current = false
     setListening(false)
+    void clientRef.current?.stop().catch((cause) => {
+      setError(cause instanceof Error ? cause.message : 'Voice input had a problem. Try again.')
+    })
   }, [])
 
-  return { supported, listening, transcript, error, start, stop, toggle: () => (listening ? stop() : start()) }
+  const toggle = useCallback(() => {
+    if (activeRef.current) stop()
+    else void start()
+  }, [start, stop])
+
+  return { supported, listening, error, start, stop, toggle }
 }
 
 /**

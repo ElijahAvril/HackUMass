@@ -4,6 +4,7 @@ preview/
 dev-dist/
 .env
 *.local
+.firebase/
 .DS_Store
 npm-debug.log*
 public/app.bundle.js

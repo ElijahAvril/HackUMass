@@ -124,3 +124,14 @@ export function describeReminder(reminder, eventIso) {
  * category automatically gets a colour without anyone picking one. Cycles.
  */
 export const categoryTone = (index) => `var(--tone-${(index % 5) + 1})`
+
+/** Events get a tint too, by their position in date order, so an event keeps
+ *  the same colour on the Events list and the Calendar. */
+export const eventTone = (event, events) =>
+  categoryTone(Math.max(0, selectSortedEvents(events).findIndex((e) => e.id === event.id)))
+
+/** Local YYYY-MM-DD for a date, used to group events by calendar day. */
+export const dayKey = (d) => {
+  const x = new Date(d)
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}

@@ -6,13 +6,86 @@
 // on?" - the CSS does. That is why adding a third palette later is a block of
 // CSS plus one more <option>, with no component edits at all.
 // ---------------------------------------------------------------------------
-import React from 'react'
+import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
 import { useStore } from '../state/store.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import { useDictation } from '../hooks/useDictation.js'
 import { requestNotificationPermission } from '../hooks/useReminders.js'
+import { useUser } from './AuthGate.jsx'
+import { firebaseReady } from '../data/firebase.js'
+import { logOut, linkGuestToGoogle, friendlyAuthError } from '../data/auth.js'
 import './Views.css'
+import './Login.css'
+
+/** Who is signed in, plus Sign out / Save to Google. */
+function AccountCard() {
+  const user = useUser()
+  const { actions } = useStore()
+  const [error, setError] = useState('')
+
+  if (!firebaseReady) {
+    return (
+      <section className="card" aria-labelledby="set-account">
+        <h2 className="panel__title" id="set-account">Account</h2>
+        <p className="panel__hint" style={{ margin: 0 }}>
+          Sign-in isn&apos;t set up on this computer yet, so lists are saved in this browser only.
+          Add the <code>.env.local</code> file with the Firebase keys and restart <code>npm run dev</code>.
+        </p>
+      </section>
+    )
+  }
+  if (!user) return null
+
+  const name = user.isAnonymous ? 'Guest' : (user.displayName || 'Signed in')
+  const initial = name.trim().charAt(0).toUpperCase()
+
+  return (
+    <section className="card" aria-labelledby="set-account">
+      <h2 className="panel__title" id="set-account">Account</h2>
+      <div className="account">
+        <span className="account__avatar" aria-hidden="true">
+          {user.photoURL ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : initial}
+        </span>
+        <span className="account__who">
+          <strong>{name}</strong>
+          <span>
+            {user.isAnonymous
+              ? 'Lists are saved, but only on this device until you add a Google account.'
+              : `${user.email} · lists sync to every device you sign in on`}
+          </span>
+        </span>
+      </div>
+
+      <div className="account__actions">
+        {user.isAnonymous ? (
+          <button
+            type="button" className="btn btn--primary"
+            onClick={async () => {
+              setError('')
+              try {
+                await linkGuestToGoogle()
+                actions.announce('Your lists are now saved to your Google account')
+              } catch (err) { setError(friendlyAuthError(err)) }
+            }}
+          >
+            <Icon name="user" size={18} /> Save my lists to Google
+          </button>
+        ) : null}
+        <button
+          type="button" className="btn"
+          onClick={() => {
+            if (user.isAnonymous && !window.confirm('Guest lists are deleted when you sign out. Sign out anyway?')) return
+            logOut()
+          }}
+        >
+          <Icon name="logout" size={18} /> Sign out
+        </button>
+      </div>
+      {error ? <p className="login__error" role="alert" style={{ marginTop: 'var(--sp-3)' }}>{error}</p> : null}
+    </section>
+  )
+}
 
 /** A labelled on/off switch. Uses a real checkbox under the hood. */
 function Toggle({ label, hint, checked, onChange, disabled, disabledHint }) {
@@ -37,6 +110,8 @@ export function SettingsTab() {
   return (
     <div className="stack">
       <h1 className="page__title">Settings</h1>
+
+      <AccountCard />
 
       {/* ---- Vision ------------------------------------------------------ */}
       <section className="card" aria-labelledby="set-vision">
@@ -111,8 +186,8 @@ export function SettingsTab() {
         <p className="panel__hint">
           Voice input is {dictation.supported ? 'available' : 'not supported in this browser'}.
           {dictation.supported
-            ? ' Use the mic on any Add field, or say “packed”, “skip” and item names in packing mode.'
-            : ' Try Chrome, Edge, or Safari to dictate items.'}
+            ? ' Dictation uses the Gemini speech service. Use a microphone on an Add field or say “packed”, “skip” and item names in packing mode.'
+            : ' Use a browser with microphone and audio worklet support, such as a recent Chrome or Edge.'}
         </p>
       </section>
 
@@ -140,8 +215,9 @@ export function SettingsTab() {
       <section className="card" aria-labelledby="set-data">
         <h2 className="panel__title" id="set-data">Your data</h2>
         <p className="panel__hint">
-          Everything is stored on this device only. Nothing is uploaded, and the
-          app works with no connection once installed.
+          {firebaseReady
+            ? 'Your lists are saved to your account and also kept on this device, so they open with no connection and upload when you are back online.'
+            : 'Everything is stored on this device only. Nothing is uploaded, and the app works with no connection once installed.'}
         </p>
         <button
           type="button" className="btn btn--ghost btn--danger"

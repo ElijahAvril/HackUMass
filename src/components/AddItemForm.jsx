@@ -52,8 +52,7 @@ export function AddItemForm({ categoryName, onAdd }) {
           onFocus={() => { targetRef.current = 'name' }}
         />
 
-        {/* Mic only renders where the browser supports recognition, so there is
-            never a button that does nothing. */}
+        {/* Hide the mic where the browser lacks the audio APIs it needs. */}
         {dictation.supported ? (
           <button
             type="button"
@@ -97,12 +96,8 @@ export function AddItemForm({ categoryName, onAdd }) {
         </label>
       ) : null}
 
-      {/* Live transcript, so a user can see that the mic heard them correctly
-          before committing. aria-live=polite announces it without interrupting. */}
       {dictation.listening ? (
-        <p className="additem__transcript" aria-live="polite">
-          Listening… {dictation.transcript}
-        </p>
+        <p className="additem__transcript" aria-live="polite">Listening…</p>
       ) : null}
       {dictation.error ? <p className="additem__error" role="alert">{dictation.error}</p> : null}
     </form>

@@ -11,6 +11,7 @@
 import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
 import { CategoryCard } from './CategoryCard.jsx'
+import { PackingAssistantButton } from './PackingAssistantButton.jsx'
 import { useStore } from '../state/store.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import {
@@ -111,6 +112,7 @@ export function EventView({ event }) {
               {speech.speaking ? 'Stop reading' : 'Read list aloud'}
             </button>
           ) : null}
+          <PackingAssistantButton event={event} />
           <button type="button" className="btn" onClick={() => actions.setTab('events')}>
             <Icon name="calendar" size={18} /> All events
           </button>

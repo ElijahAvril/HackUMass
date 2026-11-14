@@ -1,74 +1,51 @@
-import { db } from "./firebase";
+// ---------------------------------------------------------------------------
+// FIRESTORE READS AND WRITES
+// ---------------------------------------------------------------------------
+// Layout (matches the security rules: each user can only reach their own):
+//
+//   users/{uid}                 { settings }
+//   users/{uid}/events/{id}     one whole event: reminders, categories, items
+//   users/{uid}/kits/{id}       one kit: { id, name, items: [{ name, note }] }
+//
+// One document per event keeps loading simple: opening an event is one read.
+// Components never call these directly - FirebaseSync.jsx does, so the rest of
+// the app keeps using the store exactly as before.
+// ---------------------------------------------------------------------------
+import { db } from './firebase'
 import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  onSnapshot,
-  getDocs,
-  writeBatch,
-} from "firebase/firestore";
+  collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
+} from 'firebase/firestore'
 
-// Where data lives:  users/{uid}/events/{eventId}  and  users/{uid}/kits/{kitId}
-const eventsCol = (uid) => collection(db, "users", uid, "events");
-const kitsCol = (uid) => collection(db, "users", uid, "kits");
+const eventsCol = (uid) => collection(db, 'users', uid, 'events')
+const kitsCol = (uid) => collection(db, 'users', uid, 'kits')
+const userDoc = (uid) => doc(db, 'users', uid)
 
-// ---------- events ----------
-// Live listener: runs `callback(events)` now and every time events change.
-// Returns a function that stops listening.
-export function subscribeEvents(uid, callback) {
-  return onSnapshot(eventsCol(uid), (snap) =>
-    callback(snap.docs.map((d) => d.data()))
-  );
+/** Firestore rejects `undefined` values; a JSON round-trip drops them. */
+const clean = (value) => JSON.parse(JSON.stringify(value))
+
+// Live listeners: call back now and on every change (including changes made
+// on another device). Each returns a function that stops listening.
+export const subscribeEvents = (uid, callback, onError) =>
+  onSnapshot(eventsCol(uid), (snap) => callback(snap.docs.map((d) => d.data())), onError)
+
+export const subscribeKits = (uid, callback, onError) =>
+  onSnapshot(kitsCol(uid), (snap) => callback(snap.docs.map((d) => d.data())), onError)
+
+export const subscribeProfile = (uid, callback, onError) =>
+  onSnapshot(userDoc(uid), (snap) => callback(snap.exists() ? snap.data() : null), onError)
+
+export const saveEvent = (uid, event) => setDoc(doc(eventsCol(uid), event.id), clean(event))
+export const deleteEvent = (uid, eventId) => deleteDoc(doc(eventsCol(uid), eventId))
+export const saveKit = (uid, kit) => setDoc(doc(kitsCol(uid), kit.id), clean(kit))
+export const deleteKit = (uid, kitId) => deleteDoc(doc(kitsCol(uid), kitId))
+export const saveSettings = (uid, settings) =>
+  setDoc(userDoc(uid), { settings: clean(settings) }, { merge: true })
+
+/** First sign-in: copy everything on this device up to the new account. */
+export async function uploadAll(uid, { events, kits, settings }) {
+  const batch = writeBatch(db)
+  events.forEach((e) => batch.set(doc(eventsCol(uid), e.id), clean(e)))
+  kits.forEach((k) => batch.set(doc(kitsCol(uid), k.id), clean(k)))
+  batch.set(userDoc(uid), { settings: clean(settings), createdAt: new Date().toISOString() }, { merge: true })
+  await batch.commit()
 }
-
-// Creates or replaces a whole event (including its sections and items)
-export function saveEvent(uid, event) {
-  return setDoc(doc(eventsCol(uid), event.id), event);
-}
-
-export function deleteEvent(uid, eventId) {
-  return deleteDoc(doc(eventsCol(uid), eventId));
-}
-
-// ---------- kits ----------
-export function subscribeKits(uid, callback) {
-  return onSnapshot(kitsCol(uid), (snap) =>
-    callback(snap.docs.map((d) => d.data()))
-  );
-}
-
-export function saveKit(uid, kit) {
-  return setDoc(doc(kitsCol(uid), kit.id), kit);
-}
-
-export function deleteKit(uid, kitId) {
-  return deleteDoc(doc(kitsCol(uid), kitId));
-}
-
-// ---------- "forgotten before" counts ----------
-// Stored on the user's own document: { forgotten: { "laptop charger": { name, count } } }
-export function subscribeForgotten(uid, callback) {
-  return onSnapshot(doc(db, "users", uid), (snap) =>
-    callback(snap.data()?.forgotten || {})
-  );
-}
-
-export function saveForgotten(uid, forgotten) {
-  return setDoc(doc(db, "users", uid), { forgotten }, { merge: true });
-}
-
-// ---------- first sign-in: add sample data so the app isn't empty ----------
-export async function seedIfEmpty(uid, events, kits, forgotten = {}) {
-  const snap = await getDocs(eventsCol(uid));
-  if (!snap.empty) return; // user already has data, so don't overwrite
-
-  const batch = writeBatch(db);
-  events.forEach((e) => batch.set(doc(eventsCol(uid), e.id), e));
-  kits.forEach((k) => batch.set(doc(kitsCol(uid), k.id), k));
-  batch.set(doc(db, "users", uid), { forgotten }, { merge: true });
-  await batch.commit();
-}
-
-// ---------- helper for new IDs ----------
-export const newId = () => crypto.randomUUID();

@@ -16,6 +16,7 @@ import './Sidebar.css'
 const TABS = [
   { id: 'next',     label: 'Next up', icon: 'bag' },
   { id: 'events',   label: 'Events',  icon: 'calendar' },
+  { id: 'calendar', label: 'Calendar', icon: 'grid' },
   { id: 'kits',     label: 'My kits', icon: 'star' },
   { id: 'settings', label: 'Settings', icon: 'settings' },
 ]
@@ -52,6 +53,12 @@ export function Sidebar() {
           )
         })}
       </ul>
+
+      {/* Dashed "new" button: always one click from anywhere in the app. */}
+      <button type="button" className="sidebar__new" onClick={() => actions.openNewEvent()} title="New event">
+        <Icon name="plus" size={20} strokeWidth={2.2} />
+        <span className="sidebar__newlabel">New event</span>
+      </button>
     </nav>
   )
 }

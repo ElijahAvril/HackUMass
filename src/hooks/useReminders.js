@@ -17,13 +17,14 @@ import { useEffect, useRef } from 'react'
 import { selectRemainingItems } from '../state/selectors.js'
 
 export function useReminders(events, enabled, onFire) {
-  // Holds the live setTimeout ids so we can clear them when events change.
+  // Holds cancellation callbacks for the timers so they can be cleared when
+  // events change, including long-delay reminders that need multiple timers.
   const timersRef = useRef([])
 
   useEffect(() => {
     // Always clear previously scheduled timers before rescheduling; otherwise
     // editing an event would stack duplicate notifications.
-    timersRef.current.forEach(clearTimeout)
+    timersRef.current.forEach((cancel) => cancel())
     timersRef.current = []
     if (!enabled) return undefined
 
@@ -36,11 +37,11 @@ export function useReminders(events, enabled, onFire) {
         if (reminder.fired) return
         const fireAt = eventTime - reminder.offsetMinutes * 60000
         const delay = fireAt - now
-        // Skip anything in the past, and anything more than ~24 days out
-        // (setTimeout overflows its 32-bit delay past that and fires instantly).
-        if (delay <= 0 || delay > 2_073_600_000) return
+        if (delay <= 0) return
 
-        const timer = setTimeout(() => {
+        const maxTimeout = 2_000_000_000
+        let timer
+        const fireReminder = () => {
           const remaining = selectRemainingItems(event)
           const body = remaining.length
             ? `Still to pack: ${remaining.slice(0, 5).map((i) => i.name).join(', ')}` +
@@ -57,13 +58,24 @@ export function useReminders(events, enabled, onFire) {
           // Always tell the app too, so it can show an in-page banner and
           // announce to screen readers even if notifications are denied.
           onFire?.(event, reminder, body)
-        }, delay)
-
-        timersRef.current.push(timer)
+        }
+        const schedule = () => {
+          const remainingDelay = fireAt - Date.now()
+          if (remainingDelay <= 0) {
+            fireReminder()
+          } else {
+            timer = setTimeout(
+              remainingDelay > maxTimeout ? schedule : fireReminder,
+              Math.min(remainingDelay, maxTimeout),
+            )
+          }
+        }
+        schedule()
+        timersRef.current.push(() => clearTimeout(timer))
       })
     })
 
-    return () => { timersRef.current.forEach(clearTimeout); timersRef.current = [] }
+    return () => { timersRef.current.forEach((cancel) => cancel()); timersRef.current = [] }
   }, [events, enabled, onFire])
 }
 
