@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live speech-to-text demo</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/app.bundle.js"></script>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Temporary client</p>
+      <h1>Live speech-to-text demo</h1>
+      <p class="intro">
+        Start the microphone and keep talking naturally. The live assistant
+        updates a temporary draft after you pause.
+      </p>
+      <div class="controls">
+        <button id="start" type="button">Start microphone</button>
+        <button id="stop" type="button" disabled>Stop and transcribe</button>
+        <button id="clear" class="secondary" type="button" disabled>Clear text</button>
+      </div>
+      <p id="status" role="status" aria-live="polite">Ready to connect.</p>
+      <section id="account-section" aria-labelledby="account-heading">
+        <h2 id="account-heading">Firebase account</h2>
+        <p>
+          Finalized speech is sent to Gemini for transcription and interpretation.
+          Only a reminder you confirm, along with its source transcript, is saved
+          to your Firebase account.
+        </p>
+        <p id="firebase-status" role="status">
+          Configure Firebase to sign in and save reminders.
+        </p>
+        <div id="account-controls" class="controls" hidden>
+          <button id="sign-in" type="button">Sign in with Google</button>
+          <span id="account-email"></span>
+          <button id="sign-out" class="secondary" type="button" hidden>Sign out</button>
+        </div>
+      </section>
+      <section aria-labelledby="transcript-heading">
+        <h2 id="transcript-heading">Transcript</h2>
+        <p id="transcript" class="transcript" aria-live="polite">
+          Your transcript will appear here.
+        </p>
+        <label class="assistant-toggle">
+          <input id="assistant-enabled" type="checkbox" checked>
+          Interpret speech with the live assistant
+        </label>
+        <p class="helper-text">
+          It waits 1.5 seconds after speech settles before updating a temporary
+          draft. Say “I’m done” to finish an idea. Nothing is saved or acted on.
+        </p>
+        <section id="assistant-section" aria-labelledby="assistant-heading">
+          <h2 id="assistant-heading">Live assistant draft</h2>
+          <p id="assistant-status" role="status" aria-live="polite">
+            Start talking to build a temporary draft.
+          </p>
+          <p id="assistant-reply" class="assistant-reply"></p>
+          <h3 id="assistant-title"></h3>
+          <ul id="assistant-items" class="assistant-items"></ul>
+        </section>
+        <button id="interpret" type="button" disabled>
+          Interpret latest transcript as a reminder
+        </button>
+        <p id="reminder-message" role="status" aria-live="polite"></p>
+      </section>
+      <section id="proposal-section" aria-labelledby="proposal-heading" hidden>
+        <h2 id="proposal-heading">Review reminder before saving</h2>
+        <p>Check and edit Gemini’s interpretation. Nothing is saved until you confirm.</p>
+        <form id="proposal-form">
+          <label for="reminder-title">Reminder</label>
+          <input id="reminder-title" name="title" maxlength="200" required>
+          <label for="reminder-notes">Details</label>
+          <textarea id="reminder-notes" name="notes" maxlength="1000" rows="3"></textarea>
+          <label for="reminder-due">Date and time</label>
+          <input id="reminder-due" name="dueAt" type="datetime-local" required>
+          <div class="controls">
+            <button id="save-reminder" type="submit">Confirm and save reminder</button>
+            <button id="cancel-proposal" class="secondary" type="button">Cancel</button>
+          </div>
+        </form>
+      </section>
+      <section aria-labelledby="reminders-heading">
+        <h2 id="reminders-heading">Saved reminders</h2>
+        <p id="reminders-empty">Sign in to see reminders saved to your account.</p>
+        <ul id="reminders-list" class="reminders-list"></ul>
+      </section>
+      <section aria-labelledby="playback-heading">
+        <h2 id="playback-heading">Recording playback</h2>
+        <p id="playback-empty" class="playback-empty">
+          Stop a recording to review the captured audio.
+        </p>
+        <audio id="playback" controls hidden></audio>
+      </section>
+      <p class="notice">
+        This demo sends microphone audio to the configured speech-to-text
+        provider. Use it only with audio you have permission to submit.
+      </p>
+    </main>
+  </body>
+</html>

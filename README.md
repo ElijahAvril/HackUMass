@@ -1,73 +1,90 @@
 # PackPal
 
-An accessible, installable packing-checklist PWA. Every event carries its own
-packing list; lists you repeat become reusable **kits**.
+An accessible, installable packing-checklist PWA. Each event has its own packing list, and lists you reuse can be saved as kits.
 
-## Running it
+## Run locally
 
-```bash
+Requires Node.js 20 or later.
+
+```powershell
 npm install
-npm run dev        # http://localhost:5173
-npm run build      # production build into dist/
-npm run preview    # serve the production build (needed to test "Install app")
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-Install prompt appears in Chrome/Edge desktop and "Add to Home Screen" on
-mobile once you serve over https or localhost.
+Add your Gemini API key to `.env`, then start the app:
 
-## Where things live
-
+```powershell
+npm run dev
 ```
+
+Open the URL printed by Vite (usually `http://localhost:5173`). To run the production server instead:
+
+```powershell
+npm run build
+npm start
+```
+
+The production server serves the built app, usually at `http://localhost:3000`. Microphone access requires permission; `localhost` is supported as a secure browser context.
+
+Keep `GEMINI_API_KEY` in `.env` on the server. Never put it in browser code or commit your `.env` file. Each person running the app should use their own key.
+
+## Voice assistant
+
+Use **Talk to PackPal** to give spoken instructions. The assistant sends the recognized transcript to Gemini for interpretation. Say **“I’m done”** to submit what you said. A transcript preview is available while testing.
+
+The assistant can:
+
+| Say something like… | Action |
+|---|---|
+| “Pack my reference letter” | Mark a matching item as packed |
+| “Unpack my reference letter” | Mark a matching item as unpacked |
+| “Add a charger to clothes” | Add an item to an existing list |
+| “Remove the charger from clothes” | Remove a matching item |
+| “Create a list called Documents” | Create a list |
+| “Delete the Documents list” | Delete a list |
+| “Remind me one hour before the event to print my ticket” | Add an event reminder |
+| “Set the event location to the student center” | Update the event location |
+| “Move the event to 3 PM tomorrow” | Update the event start time |
+
+The assistant matches actions against the current event and its lists. Unmatched or ambiguous item/list names may not be applied, so check the app afterward. Reminders default to one day before the event when no offset is specified.
+
+## Firebase reminders
+
+Firebase setup is needed for account-based reminder storage. Firebase web configuration is used by the browser and is not a private key; keep `GEMINI_API_KEY` server-side.
+
+1. Create a Firebase project and register a Web app in the Firebase console.
+2. Enable **Authentication → Google**.
+3. Create a **Cloud Firestore** database.
+4. Add the Firebase web app configuration to the project’s Firebase client configuration.
+5. Set `FIREBASE_PROJECT_ID` in `.env` and restart the server.
+6. Publish the included Firestore security rules in **Firestore → Rules**.
+7. Ensure `localhost` is an authorized domain under **Authentication → Settings → Authorized domains**.
+
+Sign in, create or interpret a reminder, review its details, and save it. Saved reminders are associated with your Firebase account. Do not expose the backend publicly without appropriate authentication and rate limiting.
+
+## Project structure
+
+```text
 src/
-  main.jsx              Mounts React, wraps everything in the store.
-  App.jsx               Shell, tab switching, the single aria-live region,
-                        reminder scheduling, empty-state + packing takeovers.
-  state/
-    seed.js             Demo data + the data-shape contract. Empty the events
-                        array to test the "no events" screen.
-    store.jsx           ONE reducer. Every mutation in the app is a case here.
-    selectors.js        Derived data: next event, progress, item ordering,
-                        date formatting. Nothing here is stored in state.
-  hooks/
-    useSpeech.js        Text to speech (read list aloud).
-    useDictation.js     Speech to text (dictate items, voice commands).
-    useReminders.js     Schedules notifications before an event.
-  styles/
-    tokens.css          Every colour/size/font as a variable. Colour-blind
-                        mode is a palette override at the bottom of this file.
-    global.css          Layout, .card, .btn, focus rings, shared primitives.
-  components/           One file per component, CSS beside it.
+  App.jsx               App shell and views
+  components/           Packing, event, reminder, and settings UI
+  hooks/                Speech, dictation, and reminder hooks
+  state/                App state, seed data, and selectors
+  styles/               Shared styles and design tokens
+server.js               Express server and Gemini endpoints
 ```
-
-## The three rules that keep this editable
-
-1. **No component hard-codes a colour or a font size.** They use tokens.
-   Theming happens in `tokens.css` keyed off `<html data-palette>`.
-2. **No component computes a derived value.** Progress, ordering and "which
-   event is next" come from `selectors.js`, so every screen agrees.
-3. **No component mutates state directly.** They call an action from
-   `store.jsx`, so there is one list of everything the app can do.
 
 ## Accessibility
 
-| Requirement | Where |
-|---|---|
-| Colour-blind mode | `tokens.css` palette override + Settings |
-| Never colour-only | "PACKED" word, "Priority" badge, hatched progress fill |
-| Text to speech | `useSpeech.js`, "Read list aloud", packing mode |
-| Speech to text | `useDictation.js`, mic on Add fields, voice commands |
-| Flagged items prioritised | `selectOrderedItems()` in `selectors.js` |
-| Where items are kept | `item.note`, shown inline and read aloud |
-| Reminders | `useReminders.js` + `RemindersCard.jsx` |
-| Progress bar | `ProgressCard.jsx`, `role="progressbar"` |
-| 44px touch targets | `--target-min` in `tokens.css` |
-| Keyboard | Native controls throughout, skip link, visible focus ring |
-| Screen readers | One `aria-live` region in `App.jsx`, `actions.announce()` |
+- Colour-blind palette option in Settings
+- Text-to-speech for reading lists aloud
+- Speech-to-text for dictation and voice commands
+- Keyboard-accessible controls and visible focus indicators
+- Screen-reader announcements and accessible progress indicators
+- Minimum touch-target sizing for mobile controls
 
-## Known limits (worth saying out loud at the demo)
+## Notes
 
-- Reminders fire only while the app is open — real background delivery needs
-  the Push API and a server. See the note at the top of `useReminders.js`.
-- Speech recognition is Chrome/Edge/Safari only. The mic buttons hide
-  themselves where it is unsupported rather than failing silently.
-- Data is localStorage on the device. No account, no sync, works offline.
+- Microphone access and browser audio processing depend on the browser and device.
+- Reminder notifications may require the app to remain open.
+- The speech assistant uses Gemini and requires a valid server-side API key.

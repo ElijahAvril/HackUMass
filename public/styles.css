@@ -1,0 +1,224 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  color: #172033;
+  background: #f3f5f9;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+main {
+  box-sizing: border-box;
+  width: min(100% - 2rem, 42rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  background: #fff;
+  border: 1px solid #dfe4ee;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 3rem #202d4514;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  color: #4258ad;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 6vw, 2.5rem);
+}
+
+.intro {
+  color: #536078;
+  line-height: 1.6;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0 1rem;
+}
+
+button {
+  padding: 0.7rem 1rem;
+  color: #fff;
+  background: #344cad;
+  border: 0;
+  border-radius: 0.5rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+button.secondary {
+  color: #26334b;
+  background: #e8ebf3;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+label {
+  display: block;
+  margin: 0.75rem 0 0.35rem;
+  font-weight: 650;
+}
+
+input,
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #cbd2e0;
+  border-radius: 0.45rem;
+  font: inherit;
+}
+
+.assistant-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.assistant-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.helper-text {
+  color: #657087;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.assistant-reply {
+  color: #26334b;
+  line-height: 1.6;
+}
+
+.assistant-items {
+  display: grid;
+  gap: 0.65rem;
+  padding-left: 0;
+  list-style: none;
+}
+
+.assistant-items li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  padding: 0.75rem;
+  background: #f7f8fb;
+  border: 1px solid #e4e8f0;
+  border-radius: 0.45rem;
+}
+
+.assistant-items input {
+  width: auto;
+  margin-top: 0.3rem;
+}
+
+.assistant-items .due-date {
+  grid-column: 2;
+  color: #657087;
+  font-size: 0.85rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+#account-email {
+  align-self: center;
+  color: #536078;
+}
+
+#status {
+  min-height: 1.5em;
+  color: #536078;
+}
+
+#status[data-error="true"] {
+  color: #a32135;
+}
+
+#reminder-message[data-error="true"] {
+  color: #a32135;
+}
+
+section {
+  margin-top: 2rem;
+}
+
+h2 {
+  font-size: 1.1rem;
+}
+
+.transcript {
+  min-height: 6rem;
+  padding: 1rem;
+  color: #26334b;
+  background: #f7f8fb;
+  border: 1px solid #e4e8f0;
+  border-radius: 0.5rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+audio {
+  display: block;
+  width: 100%;
+}
+
+audio[hidden] {
+  display: none;
+}
+
+.reminders-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reminder-card {
+  padding: 1rem;
+  background: #f7f8fb;
+  border: 1px solid #e4e8f0;
+  border-radius: 0.5rem;
+}
+
+.reminder-card h3,
+.reminder-card p {
+  margin: 0 0 0.5rem;
+}
+
+.reminder-card .controls {
+  margin-bottom: 0;
+}
+
+.notice {
+  margin: 1.5rem 0 0;
+  color: #657087;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
