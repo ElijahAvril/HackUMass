@@ -16,6 +16,7 @@ import {
   selectSortedEvents, selectProgress, selectNextEvent, eventTone,
   formatEventTime, formatRelative,
 } from '../state/selectors.js'
+import { suggestKits } from '../state/suggestKits.js'
 import './Views.css'
 
 /** The add-an-event form. Collapsed by default to keep the list scannable. */
@@ -27,6 +28,10 @@ function EventForm({ onDone, initialDate = '' }) {
   const [location, setLocation] = useState('')
   // Kits chosen here are copied into the new event as ready-made lists.
   const [kitIds, setKitIds] = useState([])
+    // Kits that fit this title go first and get a "Suggested" label
+  const suggestedIds = suggestKits(title, state.kits, state.events).map((k) => k.id)
+  const sortedKits = [...state.kits].sort(
+    (a, b) => suggestedIds.includes(b.id) - suggestedIds.includes(a.id))
 
   const submit = (e) => {
     e.preventDefault()
@@ -82,7 +87,7 @@ function EventForm({ onDone, initialDate = '' }) {
       {state.kits.length ? (
         <fieldset className="eventform__kits">
           <legend>Start from a saved kit</legend>
-          {state.kits.map((kit) => (
+          {sortedKits.map((kit) => (
             <label key={kit.id} className="eventform__kit">
               <input
                 type="checkbox"
@@ -91,8 +96,7 @@ function EventForm({ onDone, initialDate = '' }) {
                   setKitIds((ids) => (e.target.checked ? [...ids, kit.id] : ids.filter((id) => id !== kit.id)))
                 }
               />
-              <span>{kit.name} <span className="eventform__kitcount">({kit.items.length} items)</span></span>
-            </label>
+              <span>{kit.name} <span className="eventform__kitcount">({kit.items.length} items)</span>{suggestedIds.includes(kit.id) ? <strong> · Suggested</strong> : null}</span>            </label>
           ))}
         </fieldset>
       ) : null}
