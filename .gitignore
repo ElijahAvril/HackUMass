@@ -3,3 +3,4 @@ dist
 preview
 dev-dist
 .DS_Store
+*.local
