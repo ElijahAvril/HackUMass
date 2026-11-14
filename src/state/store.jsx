@@ -25,6 +25,16 @@ const STORAGE_KEY = 'packpal.v1'
 // Tries localStorage first so your data survives a refresh (and works offline),
 // falling back to the seed. The try/catch matters: a corrupted or
 // schema-changed blob should never white-screen the app mid-demo.
+/** A fresh copy of the demo data - what a brand-new device starts with. */
+function freshState() {
+  return {
+    events: seedEvents,
+    kits: seedKits,
+    settings: seedSettings,
+    ui: { tab: 'next', openEventId: null, packingEventId: null, announcement: '' },
+  }
+}
+
 function loadInitialState() {
   const fallback = {
     events: seedEvents,
@@ -227,6 +237,23 @@ function reducer(state, action) {
     case 'ANNOUNCE':
       return { ...state, ui: { ...state.ui, announcement: action.message } }
 
+    // ---- Cloud sync (see src/data/FirebaseSync.jsx) -----------------------
+    // Replaces whichever parts arrived from Firestore. Settings are merged so
+    // device-only ones (notification permission) are kept.
+    case 'LOAD_REMOTE':
+      return {
+        ...state,
+        events: action.events ?? state.events,
+        kits: action.kits ?? state.kits,
+        settings: action.settings
+          ? { ...state.settings, ...action.settings, notifications: state.settings.notifications }
+          : state.settings,
+      }
+
+    // After sign-out: back to the demo data, so a shared device is clean.
+    case 'RESET_TO_SEED':
+      return freshState()
+
     case 'RESET_ALL':
       return { events: [], kits: state.kits, settings: state.settings,
                ui: { tab: 'events', openEventId: null, packingEventId: null, announcement: 'All events cleared' } }
@@ -308,6 +335,8 @@ export function StoreProvider({ children }) {
     setSetting: (key, value) => dispatch({ type: 'SET_SETTING', key, value }),
     announce: (message) => dispatch({ type: 'ANNOUNCE', message }),
     resetAll: () => dispatch({ type: 'RESET_ALL' }),
+    loadRemote: (data) => dispatch({ type: 'LOAD_REMOTE', ...data }),
+    resetToSeed: () => dispatch({ type: 'RESET_TO_SEED' }),
   }), [])
 
   const value = useMemo(() => ({ state, actions }), [state, actions])
