@@ -302,8 +302,11 @@ export function PackingAssistantButton({ event }) {
         </p>
       ) : null}
       <section className="packing-assistant__transcription" aria-live="polite">
-        <strong>Temporary transcription (for testing)</strong>
-        <p>{transcription || (phase === 'recording' ? 'Listening for speech…' : 'Your recognized speech will appear here.')}</p>
+        <strong>Temporary transcription</strong>
+        {/* Hint text is lighter than real speech, so it reads as a placeholder. */}
+        <p className={transcription ? undefined : 'is-placeholder'}>
+          {transcription || (phase === 'recording' ? 'Listening for speech…' : 'Your recognized speech will appear here.')}
+        </p>
       </section>
       {error ? <p className="packing-assistant__error" role="alert">{error}</p> : null}
     </div>
