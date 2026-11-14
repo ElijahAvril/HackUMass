@@ -1,0 +1,72 @@
+/* ===========================================================================
+   RIGHT-RAIL PANELS: progress, reminders, tips
+   All three share the .panel skin so the rail reads as one column of cards.
+   =========================================================================== */
+.panel { position: relative; }
+.panel__title {
+  font-size: var(--fs-md); font-weight: 800;
+  padding-bottom: var(--sp-2); margin-bottom: var(--sp-3);
+  border-bottom: 1px dashed var(--rule);
+}
+.panel__empty { color: var(--ink-soft); font-size: var(--fs-sm); margin: 0 0 var(--sp-3); }
+.panel__hint  { color: var(--ink-soft); font-size: var(--fs-sm); margin: var(--sp-3) 0; }
+.panel__action { width: 100%; margin-top: var(--sp-2); }
+.panel__action--sub { font-size: var(--fs-sm); }
+
+/* ---- Progress ------------------------------------------------------------ */
+.progress__headline { display: flex; align-items: baseline; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.progress__big { font-family: var(--font-display); font-size: var(--fs-2xl); line-height: 1; font-weight: 800; }
+.progress__of  { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 700; }
+
+.progress__ticks { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: var(--sp-3); }
+.progress__tick {
+  width: 22px; height: 22px;
+  display: grid; place-items: center;
+  border: 2px solid var(--ink); border-radius: 3px;
+  color: var(--success);
+}
+.progress__tick.is-on { background: var(--success-bg); }
+.progress__more { font-size: var(--fs-sm); color: var(--ink-soft); align-self: center; }
+
+/* The bar is deliberately thick: a 4px hairline is hard to read for anyone
+   with low vision, and it is the element assistive tech reports. */
+.progress__bar {
+  height: 14px; width: 100%;
+  background: rgba(43, 38, 34, .1);
+  border: 1px solid var(--card-edge); border-radius: 999px;
+  overflow: hidden;
+}
+.progress__fill {
+  display: block; height: 100%;
+  background: var(--success);
+  /* Diagonal hatching gives the fill a texture, so the filled portion is
+     distinguishable from the track even in greyscale or at low contrast. */
+  background-image: repeating-linear-gradient(
+    45deg, rgba(255,255,255,.22) 0 6px, transparent 6px 12px);
+  transition: width .3s ease;
+}
+.progress__caption { font-size: var(--fs-sm); color: var(--ink-soft); margin: var(--sp-2) 0 0; }
+
+/* ---- Reminders ----------------------------------------------------------- */
+.reminders { list-style: none; margin: 0; padding: 0; }
+.reminders__row {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) 0; border-bottom: 1px dashed var(--rule);
+  color: var(--ink-soft);
+}
+.reminders__row:last-child { border-bottom: none; }
+.reminders__text { display: flex; flex-direction: column; flex: 1; }
+.reminders__text strong { color: var(--ink); font-size: var(--fs-sm); }
+.reminders__when { font-family: var(--font-mono); font-size: var(--fs-xs); }
+.reminders__add { margin-top: var(--sp-3); }
+
+/* ---- Tip / info card ----------------------------------------------------- */
+.tip {
+  background: var(--accent);
+  border: 1px solid var(--accent-edge);
+}
+.tip__title { font-family: var(--font-display); font-weight: 800; margin: 0 0 var(--sp-2); font-size: var(--fs-md); }
+.tip p { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
+
+/* ---- The Start packing CTA ----------------------------------------------- */
+.startbtn { width: 100%; font-size: var(--fs-lg); min-height: 60px; }

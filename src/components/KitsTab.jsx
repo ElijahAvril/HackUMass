@@ -1,0 +1,125 @@
+// ---------------------------------------------------------------------------
+// MY KITS - the reusable templates
+// ---------------------------------------------------------------------------
+// A kit is just { id, name, items: [{name, note}] }. It has no packed state,
+// because a template is never "packed" - packed-ness belongs to an event.
+// Keeping those two shapes separate is what stops last week's ticks leaking
+// into next week's interview.
+// ---------------------------------------------------------------------------
+import React, { useState } from 'react'
+import { Icon } from './Icon.jsx'
+import { useStore } from '../state/store.jsx'
+import { selectSortedEvents } from '../state/selectors.js'
+import './Views.css'
+
+export function KitsTab() {
+  const { state, actions } = useStore()
+  const [newKit, setNewKit] = useState('')
+  const events = selectSortedEvents(state.events)
+
+  return (
+    <div className="stack">
+      <div className="row">
+        <h1 className="page__title">My kits</h1>
+      </div>
+
+      <p className="card panel__hint" style={{ margin: 0 }}>
+        A kit is a list you reuse. Apply one to an event and it arrives already
+        filled in, notes and all — then tick things off without retyping them.
+      </p>
+
+      <form
+        className="card"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!newKit.trim()) return
+          actions.saveKit(null, newKit.trim(), [])
+          actions.announce(`${newKit.trim()} kit created`)
+          setNewKit('')
+        }}
+      >
+        <label className="field">
+          <span>Create an empty kit</span>
+          <div className="row">
+            <input className="input" value={newKit} placeholder="Gym bag"
+                   onChange={(e) => setNewKit(e.target.value)} />
+            <button type="submit" className="btn btn--primary" disabled={!newKit.trim()}>
+              <Icon name="plus" size={18} /> Create
+            </button>
+          </div>
+        </label>
+      </form>
+
+      {state.kits.length === 0 ? (
+        <p className="card panel__empty">No kits yet.</p>
+      ) : (
+        state.kits.map((kit) => (
+          <section key={kit.id} className="card kit" aria-labelledby={`kit-${kit.id}`}>
+            <div className="row">
+              <h2 className="kit__name" id={`kit-${kit.id}`}>
+                <Icon name="star" size={18} /> {kit.name}
+              </h2>
+              <span className="spacer" />
+              <span className="category__count">{kit.items.length} items</span>
+            </div>
+
+            {kit.items.length ? (
+              <ul className="kit__items">
+                {kit.items.map((item, i) => (
+                  <li key={`${kit.id}-${i}`}>
+                    <strong>{item.name}</strong>
+                    {item.note ? <span className="item__note"> — {item.note}</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="panel__empty">
+                Empty for now. Build this list inside an event, then press
+                “Save these back to the kit”.
+              </p>
+            )}
+
+            <div className="kit__actions">
+              {events.length ? (
+                <label className="field kit__apply">
+                  <span className="sr-only">Add {kit.name} to an event</span>
+                  <select
+                    className="select"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const eventId = e.target.value
+                      if (!eventId) return
+                      const event = state.events.find((ev) => ev.id === eventId)
+                      // One dispatch builds the category AND its items.
+                      actions.applyKit(eventId, kit)
+                      actions.announce(`${kit.name} added to ${event?.title || 'the event'}`)
+                      e.target.value = ''
+                    }}
+                  >
+                    <option value="" disabled>Add to an event…</option>
+                    {events.map((event) => (
+                      <option key={event.id} value={event.id}>{event.title}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <button
+                type="button"
+                className="btn btn--ghost btn--danger"
+                onClick={() => {
+                  if (window.confirm(`Delete the "${kit.name}" kit?`)) {
+                    actions.removeKit(kit.id)
+                    actions.announce(`${kit.name} kit deleted`)
+                  }
+                }}
+              >
+                <Icon name="trash" size={16} /> Delete kit
+              </button>
+            </div>
+          </section>
+        ))
+      )}
+    </div>
+  )
+}
