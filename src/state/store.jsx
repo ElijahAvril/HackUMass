@@ -284,11 +284,9 @@ export function StoreProvider({ children }) {
   }, [state])
 
   // Push the accessibility settings onto <html> so tokens.css can react.
-  // This is the ONLY bridge between React state and the theme - no component
-  // ever reads `settings.palette` to decide a colour.
   useEffect(() => {
     const root = document.documentElement
-    root.dataset.palette = state.settings.palette
+    root.dataset.dyslexicFont = String(state.settings.dyslexicFont)
     root.dataset.textScale = state.settings.textScale
     root.dataset.reduceMotion = String(state.settings.reduceMotion)
   }, [state.settings])

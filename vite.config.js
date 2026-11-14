@@ -25,7 +25,7 @@ export default defineConfig({
       // Files that get precached for offline use. PackPal is offline-first:
       // all data lives in localStorage, so once cached the app works on a plane.
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff,woff2}'],
       },
 
       // ---- Web app manifest ------------------------------------------------

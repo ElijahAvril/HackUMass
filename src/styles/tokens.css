@@ -5,9 +5,8 @@
    CSS custom property. Components never hard-code a hex value - they say
    `color: var(--ink)`. Two payoffs:
 
-   1. Colour-blind mode is a PALETTE SWAP, not a code change. Setting
-      <html data-palette="colourblind"> re-points ~8 variables and the whole
-      app re-skins itself. No component knows the theme exists.
+   1. Accessibility preferences are applied app-wide through data attributes
+      on <html>, without component-specific style changes.
    2. Rebranding for the demo (different paper colour, different accent) is a
       handful of edits in this file.
 
@@ -27,10 +26,7 @@
   --dark:         #2A221D;  /* primary buttons, active nav, Start packing */
   --dark-ink:     #FCF8EF;  /* text on --dark */
 
-  /* ---- Semantic colours ---------------------------------------------
-     These four are the ONLY ones the colour-blind palette overrides.
-     Keep semantic names (success/warn), never literal names (green/yellow),
-     so the override below stays meaningful.                              */
+  /* ---- Semantic colours --------------------------------------------- */
   --success:      #B3261E;  /* the red PACKED stamp */
   --success-bg:   #FBEDE9;
   --warn:         #F3E0AE;  /* sticky note on flagged items */
@@ -81,34 +77,11 @@
   --focus-ring: 3px solid #1D4ED8;
 }
 
-/* ===========================================================================
-   COLOUR-BLIND PALETTE
-   ===========================================================================
-   Red/green is the most common confusion (deuteranopia + protanopia, ~8% of
-   men). The default palette leans on a red stamp and a yellow highlighter,
-   which can collapse into each other. This palette re-points those semantic
-   tokens to a blue/orange pair, which stays distinguishable across all three
-   common types of colour blindness.
-
-   Colour is never the only signal anywhere in the app regardless of mode -
-   packed items also get the word "PACKED" + a tick, flagged items also get a
-   "!" badge and the word "Priority". The palette is a comfort upgrade, not a
-   correctness crutch.
-   =========================================================================== */
-[data-palette='colourblind'] {
-  --success:     #11557A;  /* deep blue instead of red */
-  --success-bg:  #E4EFF6;
-  --warn:        #FFD8A8;  /* orange instead of yellow */
-  --warn-edge:   #C2630E;
-  --accent:      #D7D2E8;
-  --accent-edge: #6A5FA3;
-
-  /* Tints widened in lightness so they differ by value, not just hue. */
-  --tone-1: #EFE1EC;
-  --tone-2: #D5E3EF;
-  --tone-3: #EEE2C8;
-  --tone-4: #DCD9EA;
-  --tone-5: #E8E8E8;
+/* OpenDyslexic is bundled locally so the preference also works offline. */
+[data-dyslexic-font='true'] {
+  --font-display: 'OpenDyslexic', sans-serif;
+  --font-body: 'OpenDyslexic', sans-serif;
+  --font-mono: 'OpenDyslexic', sans-serif;
 }
 
 /* Text scale presets written by Settings. Kept here next to the tokens so

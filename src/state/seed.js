@@ -132,7 +132,7 @@ export const seedEvents = [
 
 /** The settings object, also the contract for what Settings can toggle. */
 export const seedSettings = {
-  palette: 'default',      // 'default' | 'colourblind'
+  dyslexicFont: false,
   textScale: '100',        // '100' | '115' | '130'
   reduceMotion: false,
   speakOnToggle: true,     // read item names aloud as you check them off

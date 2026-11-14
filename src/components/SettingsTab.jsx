@@ -2,9 +2,7 @@
 // SETTINGS - the accessibility controls
 // ---------------------------------------------------------------------------
 // Every control here writes ONE key into settings, and the store pushes those
-// keys onto <html data-*>. No component subscribes to "is colour-blind mode
-// on?" - the CSS does. That is why adding a third palette later is a block of
-// CSS plus one more <option>, with no component edits at all.
+// keys onto <html data-*> so CSS can apply app-wide accessibility preferences.
 // ---------------------------------------------------------------------------
 import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
@@ -113,34 +111,19 @@ export function SettingsTab() {
 
       <AccountCard />
 
-      {/* ---- Vision ------------------------------------------------------ */}
-      <section className="card" aria-labelledby="set-vision">
-        <h2 className="panel__title" id="set-vision">Seeing the app</h2>
+      {/* ---- Reading ----------------------------------------------------- */}
+      <section className="card" aria-labelledby="set-reading">
+        <h2 className="panel__title" id="set-reading">Reading and display</h2>
 
-        <fieldset className="choices">
-          <legend>Colour palette</legend>
-          {[
-            { id: 'default', label: 'Default', hint: 'Red stamps, yellow highlights' },
-            { id: 'colourblind', label: 'Colour-blind friendly', hint: 'Blue and orange instead of red and green' },
-          ].map((option) => (
-            <label key={option.id} className={`choice ${s.palette === option.id ? 'is-on' : ''}`}>
-              <input
-                type="radio" name="palette" value={option.id}
-                checked={s.palette === option.id}
-                onChange={() => {
-                  actions.setSetting('palette', option.id)
-                  actions.announce(`${option.label} palette on`)
-                }}
-              />
-              <span><strong>{option.label}</strong><span className="choice__hint">{option.hint}</span></span>
-            </label>
-          ))}
-        </fieldset>
-
-        <p className="panel__hint">
-          Either way, nothing in PackPal relies on colour alone — packed items
-          are stamped with the word, and priorities carry a “!” badge.
-        </p>
+        <Toggle
+          label="Use OpenDyslexic font"
+          hint="Changes the font throughout the app. Your choice is saved on this device."
+          checked={s.dyslexicFont}
+          onChange={(enabled) => {
+            actions.setSetting('dyslexicFont', enabled)
+            actions.announce(`OpenDyslexic font ${enabled ? 'on' : 'off'}`)
+          }}
+        />
 
         <fieldset className="choices">
           <legend>Text size</legend>

@@ -90,7 +90,8 @@ test/                    Server, speech, and packing assistant tests
 
 ## Accessibility and limitations
 
-- Colour-blind palette, text scaling, and reduced-motion settings
+- Optional OpenDyslexic font (SIL Open Font License; see
+  `public/OpenDyslexic-LICENSE.txt`), text scaling, and reduced-motion settings
 - Text-to-speech for reading packing lists aloud
 - Keyboard-accessible controls, visible focus, and screen-reader announcements
 - Reminder notifications fire while the app is open; background delivery needs
