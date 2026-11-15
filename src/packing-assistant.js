@@ -207,3 +207,14 @@ export function resolvePackingActions(
 
   return { operations, skipped }
 }
+
+/**
+ * Spoken items come back lower-case ("water bottle"); lists in the app use
+ * sentence case ("Water bottle"). Only the first letter changes, so names
+ * like "iPhone charger" or "ID card" are left as they are.
+ */
+export function capitalizeFirst(text = '') {
+  const trimmed = String(text).trim()
+  if (/^[a-z][A-Z]/.test(trimmed)) return trimmed // iPhone, eSIM
+  return trimmed.replace(/^\p{Ll}/u, (letter) => letter.toUpperCase())
+}

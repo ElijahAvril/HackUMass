@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Icon } from './Icon.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import {
+  capitalizeFirst,
   hasAssistantEndPhrase,
   removeAssistantEndPhrase,
   resolvePackingActions,
@@ -13,8 +14,24 @@ import { useStore } from '../state/store.jsx'
 const COMPLETION_TIMEOUT_MS = 20000
 const FINAL_TRANSCRIPT_GRACE_MS = 1800
 
-export function PackingAssistantButton({ event }) {
-  const { actions } = useStore()
+/** "2026-11-20" + "15:00" (or "" for all day) -> ISO time in the user's timezone. */
+function startsAtFrom(date, time) {
+  return new Date(`${date}T${time || '00:00'}`).toISOString()
+}
+
+/**
+ * The voice assistant. Two modes:
+ *   <PackingAssistantButton event={event} /> - on an event's page: pack,
+ *       unpack, add or remove items and lists, reminders, time, place.
+ *   <PackingAssistantButton />               - on the Events page: create new
+ *       events ("Dentist Friday at 3, bring my insurance card") and add items
+ *       to events that already exist ("add sunscreen to Beach day").
+ */
+export function PackingAssistantButton({ event = null }) {
+  const { state, actions } = useStore()
+  const eventsMode = !event
+  const stateRef = useRef(state)
+  stateRef.current = state
   const speech = useSpeech()
   const [phase, setPhase] = useState('idle')
   const [message, setMessage] = useState('')
@@ -122,7 +139,9 @@ export function PackingAssistantButton({ event }) {
     try {
       await clientRef.current.start()
       updatePhase('recording')
-      setMessage('Listening. Say what you want to pack, unpack, add, or remove.')
+      setMessage(eventsMode
+        ? 'Listening. Tell me about an event, like “Dentist on Friday at 3, bring my insurance card.”'
+        : 'Listening. Say what you want to pack, unpack, add, or remove.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not start voice input.')
       updatePhase('idle')
@@ -161,6 +180,12 @@ export function PackingAssistantButton({ event }) {
         throw new Error('I heard “I’m done,” but not a packing request to act on.')
       }
 
+      if (eventsMode) {
+        await handleEventsRequest(transcript)
+        updatePhase('idle')
+        return
+      }
+
       const currentEvent = eventRef.current
       if (currentEvent.id !== event.id) {
         throw new Error('The selected event changed. Start a new conversation for that list.')
@@ -194,14 +219,21 @@ export function PackingAssistantButton({ event }) {
       if (latestEvent.id !== currentEvent.id) {
         throw new Error('The selected event changed. Start a new conversation for that list.')
       }
-      const { operations, skipped } = resolvePackingActions(
+      const resolved = resolvePackingActions(
         latestEvent.categories,
         result.assistant.actions,
         latestEvent.reminders,
       )
+      const { skipped } = resolved
+      // Spoken names come back lower-case; the app's lists use "Water bottle".
+      const operations = resolved.operations.map((operation) => (
+        operation.type === 'add_item' ? { ...operation, itemName: capitalizeFirst(operation.itemName) }
+          : operation.type === 'create_list' ? { ...operation, categoryName: capitalizeFirst(operation.categoryName) }
+            : operation
+      ))
       for (const operation of operations) {
         if (operation.type === 'create_list') {
-          actions.addCategory(latestEvent.id, operation.categoryName)
+          actions.addCategory(latestEvent.id, operation.categoryName, operation.categoryId)
         } else if (operation.type === 'remove_list') {
           actions.removeCategory(latestEvent.id, operation.categoryId)
         } else if (operation.type === 'add_reminder') {
@@ -279,6 +311,87 @@ export function PackingAssistantButton({ event }) {
       clearTimeout(completeRef.current?.settleTimer)
       completeRef.current = null
     }
+  }
+
+  /** Events page: turn the request into new events and/or items on existing ones. */
+  const handleEventsRequest = async (transcript) => {
+    const current = stateRef.current
+    const response = await fetch(speechHttpUrl('/api/events/interpret'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transcript,
+        events: current.events.slice(0, 50).map(({ title, startsAt }) => ({ title, startsAt })),
+        kits: current.kits.slice(0, 50).map((kit) => kit.name),
+        now: new Date().toISOString(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
+    })
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.error || 'Gemini could not interpret that request.')
+    }
+
+    const { reply, clarification, events: newEvents, additions } = result.assistant
+    const changes = []
+    const latest = stateRef.current
+
+    // Items for events that already exist go into their first list.
+    for (const addition of additions) {
+      const target = latest.events.find(
+        (ev) => ev.title.trim().toLowerCase() === addition.eventTitle.trim().toLowerCase(),
+      )
+      if (!target) {
+        changes.push(`I couldn't find an event called ${addition.eventTitle}.`)
+        continue
+      }
+      const items = addition.items.map(capitalizeFirst)
+      if (target.categories.length) {
+        const list = target.categories[0]
+        const have = new Set(list.items.map((item) => item.name.toLowerCase()))
+        const fresh = items.filter((name) => !have.has(name.toLowerCase()))
+        for (const name of fresh) actions.addItem(target.id, list.id, name, '')
+        if (fresh.length) changes.push(`Added ${fresh.join(', ')} to ${target.title}.`)
+      } else {
+        // Make the list with a known id, so items can go straight in.
+        const listId = `cat_voice_${Date.now()}`
+        actions.addCategory(target.id, 'Essentials', listId)
+        for (const name of items) actions.addItem(target.id, listId, name, '')
+        changes.push(`Added ${items.join(', ')} to ${target.title}.`)
+      }
+    }
+
+    // New events. Each opens like a normal new event, with the usual reminders.
+    for (const spoken of newEvents) {
+      const kits = latest.kits.filter((kit) =>
+        spoken.kits.some((name) => name.trim().toLowerCase() === kit.name.trim().toLowerCase()))
+      const items = spoken.items.map(capitalizeFirst)
+      const stamp = Date.now()
+      actions.addEvent({
+        title: capitalizeFirst(spoken.title),
+        startsAt: startsAtFrom(spoken.date, spoken.time),
+        isAllDay: !spoken.time,
+        location: spoken.location,
+        notes: spoken.notes,
+        items,
+        kits,
+        stay: true,
+        reminders: [
+          { id: `rem_${stamp}_a`, offsetMinutes: 1440, fired: false },
+          { id: `rem_${stamp}_b`, offsetMinutes: 120, fired: false },
+        ],
+      })
+      const when = new Date(startsAtFrom(spoken.date, spoken.time))
+      const whenText = when.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
+        + (spoken.time ? ` at ${when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : ', all day')
+      const bring = [...items, ...kits.map((kit) => `the ${kit.name} kit`)]
+      changes.push(`Added ${capitalizeFirst(spoken.title)} on ${whenText}${bring.length ? `, bringing ${bring.join(', ')}` : ''}.`)
+    }
+
+    const summary = [reply, ...changes, clarification].filter(Boolean).join(' ')
+    setMessage(summary || 'I didn’t hear an event to add. Try “Dentist on Friday at 3 PM.”')
+    if (changes.length) actions.announce(changes.join(' '))
+    if (summary && speech.supported) speech.speak(summary)
   }
 
   finishConversationRef.current = finishConversation

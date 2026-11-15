@@ -111,7 +111,13 @@ function reducer(state, action) {
         reminders: action.reminders || [],
         // New events start with one general category plus any kits applied.
         categories: [
-          { id: uid('cat'), name: 'Essentials', kitId: null, items: [] },
+          {
+            id: uid('cat'), name: 'Essentials', kitId: null,
+            // Items given by name (e.g. said by voice) start in Essentials.
+            items: (action.items || []).map((name) => ({
+              id: uid('it'), name, note: '', packed: false, flagged: false,
+            })),
+          },
           ...(action.kits || []).map((kit) => ({
             id: uid('cat'),
             name: kit.name,
@@ -122,6 +128,8 @@ function reducer(state, action) {
           })),
         ],
       }
+      // `stay` (used by voice) keeps you where you are instead of opening it.
+      if (action.stay) return { ...state, events: [...state.events, event] }
       return { ...state, events: [...state.events, event], ui: { ...state.ui, openEventId: event.id, tab: 'next' } }
     }
 
@@ -149,7 +157,7 @@ function reducer(state, action) {
     case 'ADD_CATEGORY':
       return mapEvent(state, action.eventId, (e) => ({
         ...e,
-        categories: [...e.categories, { id: uid('cat'), name: action.name, kitId: action.kitId || null, items: action.items || [] }],
+        categories: [...e.categories, { id: action.categoryId || uid('cat'), name: action.name, kitId: action.kitId || null, items: action.items || [] }],
       }))
 
     case 'REMOVE_CATEGORY':
@@ -346,7 +354,7 @@ export function StoreProvider({ children }) {
     removeEvent: (eventId) => dispatch({ type: 'REMOVE_EVENT', eventId }),
     updateEvent: (eventId, patch) => dispatch({ type: 'UPDATE_EVENT', eventId, patch }),
 
-    addCategory: (eventId, name) => dispatch({ type: 'ADD_CATEGORY', eventId, name }),
+    addCategory: (eventId, name, categoryId) => dispatch({ type: 'ADD_CATEGORY', eventId, name, categoryId }),
     // Copies a kit's items into an event as a new category, in ONE dispatch.
     // Copy, not reference: editing the event list must never rewrite the kit.
     applyKit: (eventId, kit) => dispatch({
