@@ -7,6 +7,7 @@ import {
   resolvePackingActions,
 } from '../packing-assistant.js'
 import { SpeechToTextClient } from '../speech-to-text-client.js'
+import { speechHttpUrl, speechSocketUrl } from '../speechServer.js'
 import { useStore } from '../state/store.jsx'
 
 const COMPLETION_TIMEOUT_MS = 20000
@@ -41,6 +42,7 @@ export function PackingAssistantButton({ event }) {
 
   useEffect(() => {
     const client = new SpeechToTextClient({
+      url: speechSocketUrl(),
       onEvent(transcriptionEvent) {
         if (clientRef.current !== client) return
         if (transcriptionEvent.type === 'speech_to_text.interim_transcript') {
@@ -164,7 +166,7 @@ export function PackingAssistantButton({ event }) {
         throw new Error('The selected event changed. Start a new conversation for that list.')
       }
 
-      const response = await fetch('/api/packing/interpret', {
+      const response = await fetch(speechHttpUrl('/api/packing/interpret'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

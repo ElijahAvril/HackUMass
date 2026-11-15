@@ -15,6 +15,15 @@ const MAX_ASSISTANT_REQUESTS_PER_MINUTE = 8;
 const GEMINI_TEXT_MODEL =
   process.env.GEMINI_TEXT_MODEL ?? "gemini-3.5-flash-lite";
 const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID;
+
+// When the website is hosted elsewhere (Firebase Hosting) and this server only
+// does speech (e.g. on Render), set SPEECH_ONLY=true so it doesn't serve its own
+// copy of the site, and list the sites allowed to use it in ALLOWED_ORIGINS
+// (comma-separated). Only those sites can spend the Gemini key.
+const SPEECH_ONLY = /^(1|true|yes)$/i.test(process.env.SPEECH_ONLY ?? "");
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ??
+  "https://packuroo.web.app,https://packuroo.firebaseapp.com,http://localhost:5173,http://localhost:5174,http://localhost:3000")
+  .split(",").map((origin) => origin.trim().replace(/\/+$/, "")).filter(Boolean);
 const FIREBASE_JWKS = createRemoteJWKSet(
   new URL(
     "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
@@ -325,6 +334,8 @@ export function createSpeechToTextServer({
   firebaseProjectId = FIREBASE_PROJECT_ID,
   textModel = GEMINI_TEXT_MODEL,
   geminiFetch = fetch,
+  speechOnly = SPEECH_ONLY,
+  allowedOrigins = ALLOWED_ORIGINS,
   verifyFirebaseToken = (token, projectId) => jwtVerify(token, FIREBASE_JWKS, {
     issuer: `https://securetoken.google.com/${projectId}`,
     audience: projectId
@@ -336,6 +347,27 @@ export function createSpeechToTextServer({
 
   const app = express();
   const assistantRequests = new Map();
+  // Let the Firebase-hosted site call this server from another address (CORS).
+  // Requests with no Origin (curl, tests, same-site) are unaffected.
+  app.use((request, response, next) => {
+    const origin = request.headers.origin;
+    if (origin) {
+      if (!allowedOrigins.includes(origin)) {
+        response.status(403).json({ error: "This site is not allowed to use the speech server." });
+        return;
+      }
+      response.setHeader("Access-Control-Allow-Origin", origin);
+      response.setHeader("Vary", "Origin");
+      response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      response.setHeader("Access-Control-Max-Age", "600");
+    }
+    if (request.method === "OPTIONS") {
+      response.sendStatus(204);
+      return;
+    }
+    next();
+  });
   app.use(express.json({ limit: "16kb" }));
   app.get("/health", (_request, response) => {
     response.json({ status: "ok" });
@@ -745,9 +777,16 @@ export function createSpeechToTextServer({
       });
     }
   });
-  app.use(
-    express.static(resolve(dirname(fileURLToPath(import.meta.url)), "dist"))
-  );
+  if (speechOnly) {
+    // No website here - it lives on Firebase Hosting.
+    app.get("/", (_request, response) => {
+      response.type("text").send("Packuroo speech server is running. The app is at https://packuroo.web.app");
+    });
+  } else {
+    app.use(
+      express.static(resolve(dirname(fileURLToPath(import.meta.url)), "dist"))
+    );
+  }
 
   const server = createServer(app);
   const webSocketServer = new WebSocketServer({
@@ -767,6 +806,14 @@ export function createSpeechToTextServer({
 
     if (pathname !== "/speech-to-text") {
       socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    // Browsers always send Origin on WebSockets: only our own sites may connect.
+    const origin = request.headers.origin;
+    if (origin && !allowedOrigins.includes(origin)) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
