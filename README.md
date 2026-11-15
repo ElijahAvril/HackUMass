@@ -1,10 +1,10 @@
 # Packuroo
 
-https://packuroo.web.app/
 Packuroo is an accessible, installable packing-checklist PWA. Each event has
 its own packing list, and repeat lists can be saved as reusable kits. Events
 can be scheduled for a specific time or marked all day. Checklist data is
 stored locally in the browser.
+https://packuroo.web.app/
 
 ## Run locally
 
