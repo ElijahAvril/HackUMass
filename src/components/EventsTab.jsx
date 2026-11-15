@@ -14,19 +14,34 @@ import { Icon } from './Icon.jsx'
 import { useStore } from '../state/store.jsx'
 import {
   selectSortedEvents, selectProgress, selectNextEvent, eventTone,
-  formatEventTime, formatRelative,
+  formatEventTime, formatRelative, dayKey,
 } from '../state/selectors.js'
 import { suggestKits } from '../state/suggestKits.js'
+import { TimeSelect, ALL_DAY, timeOf } from './TimeSelect.jsx'
+import { DatePicker } from './DatePicker.jsx'
 import './Views.css'
 
-/** The add-an-event form. Collapsed by default to keep the list scannable. */
-function EventForm({ onDone, initialDate = '' }) {
+/** "2026-11-20" in the user's own timezone (not UTC). */
+const dateOf = (iso) => {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * The event form. Two modes:
+ *   <EventForm />               - "Add an event" (blank, with kit picker)
+ *   <EventForm event={event} /> - "Edit event" (filled in; lists, items and
+ *                                 reminders are kept exactly as they are)
+ */
+export function EventForm({ onDone, initialDate = '', event = null }) {
   const { state, actions } = useStore()
-  const [title, setTitle] = useState('')
-  const [date, setDate] = useState(initialDate)
-  const [time, setTime] = useState('09:00')
-  const [allDay, setAllDay] = useState(false)
-  const [location, setLocation] = useState('')
+  const editing = !!event
+  const [title, setTitle] = useState(event?.title || '')
+  const [date, setDate] = useState(event ? dateOf(event.startsAt) : initialDate)
+  const [time, setTime] = useState(event ? ((event.isAllDay || event.allDay) ? ALL_DAY : timeOf(event.startsAt)) : '09:00')
+  const [location, setLocation] = useState(event?.location || '')
+  const formId = event?.id || 'new'
+  const [dateMissing, setDateMissing] = useState(false)
   // Kits chosen here are copied into the new event as ready-made lists.
   const [kitIds, setKitIds] = useState([])
     // Kits that fit this title go first and get a "Suggested" label
@@ -36,9 +51,26 @@ function EventForm({ onDone, initialDate = '' }) {
 
   const submit = (e) => {
     e.preventDefault()
-    if (!title.trim() || !date) return
-    // Keep the selected local date stable when converting it to the stored ISO time.
-    const startsAt = new Date(`${date}T${allDay ? '00:00' : time || '09:00'}`).toISOString()
+    if (!title.trim()) return
+    if (!date) { setDateMissing(true); actions.announce('Please choose a date'); return }
+    // Build a local-time ISO string. `new Date('2026-11-20T10:00')` without a
+    // Z suffix is parsed in the user's own timezone, which is what we want.
+    // All-day events start at midnight and show "All day" instead of a time.
+    const allDay = time === ALL_DAY
+    const startsAt = new Date(`${date}T${allDay ? '00:00' : (time || '09:00')}`).toISOString()
+
+    if (editing) {
+      const patch = { title: title.trim(), startsAt, isAllDay: allDay, location: location.trim() }
+      // New time = the reminders should be able to ring again.
+      if (startsAt !== event.startsAt) {
+        patch.reminders = event.reminders.map((r) => ({ ...r, fired: false }))
+      }
+      actions.updateEvent(event.id, patch)
+      actions.announce(`${title.trim()} saved`)
+      onDone?.()
+      return
+    }
+
     actions.addEvent({
       title: title.trim(),
       startsAt,
@@ -55,8 +87,9 @@ function EventForm({ onDone, initialDate = '' }) {
   }
 
   return (
-    <form className="card eventform" onSubmit={submit}>
-      <h2 className="panel__title">Add an event</h2>
+    <form className={`card eventform ${editing ? 'eventform--edit' : ''}`} onSubmit={submit}
+          aria-label={editing ? `Edit ${event.title}` : 'Add an event'}>
+      <h2 className="panel__title">{editing ? 'Edit event' : 'Add an event'}</h2>
 
       <label className="field">
         <span>What is it?</span>
@@ -65,22 +98,17 @@ function EventForm({ onDone, initialDate = '' }) {
       </label>
 
       <div className="eventform__grid">
-        <label className="field">
-          <span>Date</span>
-          <input className="input" type="date" value={date}
-                 onChange={(e) => setDate(e.target.value)} required />
-        </label>
-        <div className="eventform__time">
-          <label className="field">
-            <span>Time</span>
-            <input className="input" type="time" value={time} disabled={allDay}
-                   onChange={(e) => setTime(e.target.value)} />
-          </label>
-          <label className="eventform__all-day">
-            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-            <span>All day</span>
-          </label>
-          {allDay ? <span className="eventform__all-day-note">Reminders use 9 AM as the reference time.</span> : null}
+        <div className="field">
+          <span id={`date-label-${formId}`}>Date</span>
+          <DatePicker labelId={`date-label-${formId}`} value={date}
+                      onChange={(d) => { setDate(d); setDateMissing(false) }}
+                      markedDays={state.events.map((ev) => dayKey(ev.startsAt))} />
+          {dateMissing ? <p className="field__error">Please choose a date.</p> : null}
+        </div>
+        <div className="field">
+          <span id={`time-label-${formId}`}>Time</span>
+          <TimeSelect labelId={`time-label-${formId}`} value={time} onChange={setTime} />
+          {time === ALL_DAY ? <span className="eventform__all-day-note">Reminders use 9 AM as the reference time.</span> : null}
         </div>
       </div>
 
@@ -92,7 +120,7 @@ function EventForm({ onDone, initialDate = '' }) {
 
       {/* Kit picker: checkboxes in a fieldset so screen readers announce the
           group name once instead of repeating it per option. */}
-      {state.kits.length ? (
+      {state.kits.length && !editing ? (
         <fieldset className="eventform__kits">
           <legend>Start from a saved kit</legend>
           {sortedKits.map((kit) => (
@@ -110,7 +138,9 @@ function EventForm({ onDone, initialDate = '' }) {
       ) : null}
 
       <div className="row" style={{ marginTop: 'var(--sp-4)' }}>
-        <button type="submit" className="btn btn--primary"><Icon name="plus" size={18} /> Add event</button>
+        <button type="submit" className="btn btn--primary">
+          <Icon name={editing ? 'check' : 'plus'} size={18} /> {editing ? 'Save changes' : 'Add event'}
+        </button>
         <button type="button" className="btn btn--ghost" onClick={onDone}>Cancel</button>
       </div>
     </form>
@@ -149,6 +179,7 @@ export function EventsTab() {
   const { state, actions } = useStore()
   const [adding, setAdding] = useState(false)
   const [prefillDate, setPrefillDate] = useState('')
+  const [editingId, setEditingId] = useState(null)
   const events = selectSortedEvents(state.events)
   const next = selectNextEvent(state.events)
   const nextProgress = selectProgress(next)
@@ -191,6 +222,13 @@ export function EventsTab() {
           <ul className="eventlist">
             {events.map((event) => {
               const progress = selectProgress(event)
+              if (editingId === event.id) {
+                return (
+                  <li key={event.id}>
+                    <EventForm event={event} onDone={() => setEditingId(null)} />
+                  </li>
+                )
+              }
               return (
                 <li key={event.id} className="card agrow">
                   <DateBlock iso={event.startsAt} tone={eventTone(event, state.events)} />
@@ -212,6 +250,9 @@ export function EventsTab() {
                       </button>
                       <button type="button" className="btn btn--primary" onClick={() => actions.startPacking(event.id)}>
                         <Icon name="check" size={16} /> Start packing<span className="sr-only"> for {event.title}</span>
+                      </button>
+                      <button type="button" className="btn btn--ghost" onClick={() => setEditingId(event.id)}>
+                        <Icon name="pencil" size={16} /> Edit<span className="sr-only"> {event.title}</span>
                       </button>
                       <button
                         type="button"
