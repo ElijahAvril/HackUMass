@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
+import { Dropdown } from './Dropdown.jsx'
 import { useStore } from '../state/store.jsx'
 import { selectSortedEvents } from '../state/selectors.js'
 import './Views.css'
@@ -136,27 +137,20 @@ export function KitsTab() {
 
             <div className="kit__actions">
               {events.length ? (
-                <label className="field kit__apply">
-                  <span className="sr-only">Add {kit.name} to an event</span>
-                  <select
-                    className="select"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const eventId = e.target.value
-                      if (!eventId) return
+                <div className="field kit__apply">
+                  <Dropdown
+                    ariaLabel={`Add ${kit.name} to an event`}
+                    value=""
+                    placeholder="Add to an event…"
+                    options={events.map((event) => ({ value: event.id, label: event.title, icon: 'calendar' }))}
+                    onChange={(eventId) => {
                       const event = state.events.find((ev) => ev.id === eventId)
                       // One dispatch builds the category AND its items.
                       actions.applyKit(eventId, kit)
                       actions.announce(`${kit.name} added to ${event?.title || 'the event'}`)
-                      e.target.value = ''
                     }}
-                  >
-                    <option value="" disabled>Add to an event…</option>
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>{event.title}</option>
-                    ))}
-                  </select>
-                </label>
+                  />
+                </div>
               ) : null}
 
               <button

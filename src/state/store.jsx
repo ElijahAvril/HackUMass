@@ -139,6 +139,9 @@ function reducer(state, action) {
       return mapEvent(state, action.eventId, (event) => ({
         ...event,
         ...action.patch,
+        // Giving an all-day event a specific time (e.g. by voice: "it's at
+        // 3 PM now") turns it into a timed event.
+        ...(action.patch.startsAt && !('isAllDay' in action.patch) ? { isAllDay: false } : {}),
       }))
 
     // ---- Categories -------------------------------------------------------

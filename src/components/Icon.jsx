@@ -39,6 +39,7 @@ const PATHS = {
   grid: 'M3.5 5.5h17v15h-17v-15ZM3.5 10h17M3.5 15.2h17M9.2 10v10.5M14.8 10v10.5M8 3.5v3M16 3.5v3',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20.5a7.5 7.5 0 0 1 15 0',
   logout: 'M14 4.5h4.5v15H14M10 8.5 6.5 12l3.5 3.5M6.5 12H15',
+  sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4',
   // --- item glyphs (matched by keyword, see pickItemIcon below) ---
   doc: 'M7 3.5h7l4 4v13H7v-17ZM14 3.5v4h4M9.5 12h6M9.5 15.5h6',
   usb: 'M11 20.5v-9M11 11.5H8.5v-4h5v4H11ZM11 7.5V4M9.5 4h3',
