@@ -26,6 +26,76 @@ function findMatchingEntries(entries, requestedName) {
     (entry) => normalizeForMatching(entry.name) === canonicalName,
   )
 }
+
+export function normalizeKitName(name) {
+  return normalizeForMatching(name)
+    .replace(/^(?:(?:my\s+)?saved\s+|my\s+)/, '')
+    .replace(/\s+(?:kit|list)$/, '')
+}
+
+export function findExplicitKitAssignments(transcript, events, kits) {
+  const spoken = normalizeForMatching(transcript)
+  const hasAddIntent = /\b(?:add|apply|put|use|include|attach|place)\b/.test(spoken)
+    && !/\b(?:remove|delete|cancel|without|instead of|do not|never)\b/.test(spoken)
+  if (!hasAddIntent) return []
+
+  const containsPhrase = (text, phrase) =>
+    text === phrase || text.startsWith(`${phrase} `) || text.endsWith(` ${phrase}`)
+    || text.includes(` ${phrase} `)
+
+  const assignments = []
+  for (const event of events) {
+    const eventName = normalizeForMatching(event.title)
+    if (!eventName || !containsPhrase(spoken, eventName)) continue
+
+    const matchedKits = kits
+      .filter((kit) => containsPhrase(spoken, normalizeKitName(kit.name)))
+      .map((kit) => kit.name)
+    if (matchedKits.length) {
+      assignments.push({ eventTitle: event.title, kits: matchedKits })
+    }
+  }
+  return assignments
+}
+
+export function parseDeleteConfirmation(transcript) {
+  const answer = removeAssistantEndPhrase(transcript)
+    .toLocaleLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[.!?,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if ([
+    'yes',
+    'yeah',
+    'yep',
+    'correct',
+    'confirm',
+    'confirmed',
+    'do it',
+    'delete it',
+    'go ahead',
+    'yes delete it',
+    'yes go ahead',
+  ].includes(answer)) return true
+
+  if ([
+    'no',
+    'nope',
+    'nah',
+    'cancel',
+    'keep it',
+    "don't",
+    'do not',
+    "don't delete it",
+    'do not delete it',
+    'no keep it',
+  ].includes(answer)) return false
+
+  return null
+}
+
 const END_PHRASE_PATTERN = /\bi['’]m\s+done[.!?,\s]*$/i
 
 export function hasAssistantEndPhrase(transcript) {
