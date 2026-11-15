@@ -39,6 +39,11 @@ export function EventHeader({ event, compact = false }) {
         ) : null}
         <span className="evhead__rel">{formatRelative(event.startsAt, event.isAllDay)}</span>
       </p>
+      {event.notes ? (
+        <p style={{ whiteSpace: 'pre-wrap', margin: '8px 0 0' }}>
+          <strong>Notes:</strong> {event.notes}
+        </p>
+      ) : null}
     </div>
   )
 }

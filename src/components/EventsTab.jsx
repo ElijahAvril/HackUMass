@@ -40,6 +40,7 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
   const [date, setDate] = useState(event ? dateOf(event.startsAt) : initialDate)
   const [time, setTime] = useState(event ? ((event.isAllDay || event.allDay) ? ALL_DAY : timeOf(event.startsAt)) : '09:00')
   const [location, setLocation] = useState(event?.location || '')
+  const [notes, setNotes] = useState(event?.notes || '')
   const formId = event?.id || 'new'
   const [dateMissing, setDateMissing] = useState(false)
   // Kits chosen here are copied into the new event as ready-made lists.
@@ -60,8 +61,7 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
     const startsAt = new Date(`${date}T${allDay ? '00:00' : (time || '09:00')}`).toISOString()
 
     if (editing) {
-      const patch = { title: title.trim(), startsAt, isAllDay: allDay, location: location.trim() }
-      // New time = the reminders should be able to ring again.
+      const patch = { title: title.trim(), startsAt, isAllDay: allDay, location: location.trim(), notes: notes.trim() }      // New time = the reminders should be able to ring again.
       if (startsAt !== event.startsAt) {
         patch.reminders = event.reminders.map((r) => ({ ...r, fired: false }))
       }
@@ -76,6 +76,7 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
       startsAt,
       isAllDay: allDay,
       location: location.trim(),
+      notes: notes.trim(),
       reminders: [
         { id: `rem_${Date.now()}_a`, offsetMinutes: 1440, fired: false },
         { id: `rem_${Date.now()}_b`, offsetMinutes: 120, fired: false },
@@ -118,6 +119,13 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
                onChange={(e) => setLocation(e.target.value)} />
       </label>
 
+      <label className="field">
+        <span>Notes (optional)</span>
+        <textarea className="input" rows={3} value={notes}
+                  placeholder="Ask for Maria at the front desk. Park in lot B."
+                  onChange={(e) => setNotes(e.target.value)} />
+      </label>
+      
       {/* Kit picker: checkboxes in a fieldset so screen readers announce the
           group name once instead of repeating it per option. */}
       {state.kits.length && !editing ? (
@@ -239,6 +247,11 @@ export function EventsTab() {
                       <span><Icon name="clock" size={15} /> {formatEventTime(event.startsAt, event.isAllDay)} · {formatRelative(event.startsAt, event.isAllDay)}</span>
                       {event.location ? <span><Icon name="pin" size={15} /> {event.location}</span> : null}
                     </p>
+                    {event.notes ? (
+                      <p className="agrow__meta" style={{ whiteSpace: 'pre-wrap' }}>
+                        <span><Icon name="pencil" size={15} /> <strong>Notes:</strong> {event.notes}</span>
+                      </p>
+                    ) : null}                    
                     <p className="agrow__progress">
                       <TickRow packed={progress.packed} total={progress.total} />
                       <span className="eventlist__count"><strong>{progress.packed} of {progress.total}</strong> packed</span>
