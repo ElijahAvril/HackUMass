@@ -107,6 +107,7 @@ function reducer(state, action) {
         startsAt: action.startsAt,
         isAllDay: Boolean(action.isAllDay),
         location: action.location || '',
+        notes: action.notes || '',
         reminders: action.reminders || [],
         // New events start with one general category plus any kits applied.
         categories: [
