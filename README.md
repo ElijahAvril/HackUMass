@@ -59,6 +59,11 @@ one day before the event. A reminder must be in the future and before the event
 starts. Silence submission is disabled for this assistant; use the explicit end
 phrase or manual submit button.
 
+On the Events screen, you can say “Remove the Documents kit from Doctor’s
+appointment. I’m done.” This removes only that kit from the event; the saved kit
+stays in My Kits. You can also say “Delete the Dentist event. I’m done.” The
+assistant asks for a separate yes/no confirmation before deleting an event.
+
 ## Development
 
 ```powershell

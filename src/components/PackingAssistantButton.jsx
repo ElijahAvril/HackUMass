@@ -3,13 +3,17 @@ import { Icon } from './Icon.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import {
   capitalizeFirst,
+  findExplicitKitAssignments,
   hasAssistantEndPhrase,
+  normalizeKitName,
+  parseDeleteConfirmation,
   removeAssistantEndPhrase,
   resolvePackingActions,
 } from '../packing-assistant.js'
 import { SpeechToTextClient } from '../speech-to-text-client.js'
 import { speechHttpUrl, speechSocketUrl } from '../speechServer.js'
 import { useStore } from '../state/store.jsx'
+import { uid } from '../state/seed.js'
 
 const COMPLETION_TIMEOUT_MS = 20000
 const FINAL_TRANSCRIPT_GRACE_MS = 1800
@@ -24,8 +28,7 @@ function startsAtFrom(date, time) {
  *   <PackingAssistantButton event={event} /> - on an event's page: pack,
  *       unpack, add or remove items and lists, reminders, time, place.
  *   <PackingAssistantButton />               - on the Events page: create new
- *       events ("Dentist Friday at 3, bring my insurance card") and add items
- *       to events that already exist ("add sunscreen to Beach day").
+ *       events, reusable kits, and add items to events that already exist.
  */
 export function PackingAssistantButton({ event = null }) {
   const { state, actions } = useStore()
@@ -43,6 +46,7 @@ export function PackingAssistantButton({ event = null }) {
   const turnCompleteRef = useRef(false)
   const completeRef = useRef(null)
   const finishConversationRef = useRef(null)
+  const pendingDeleteRef = useRef([])
   const eventRef = useRef(event)
   eventRef.current = event
   const audioSupported = typeof navigator !== 'undefined'
@@ -140,8 +144,8 @@ export function PackingAssistantButton({ event = null }) {
       await clientRef.current.start()
       updatePhase('recording')
       setMessage(eventsMode
-        ? 'Listening. Tell me about an event, like “Dentist on Friday at 3, bring my insurance card.”'
-        : 'Listening. Say what you want to pack, unpack, add, or remove.')
+        ? 'Listening. Say an event name and date (time and location are optional), or ask me to make a kit or list.'
+        : 'Listening. Say what you want to pack, unpack, add, remove, or create as a list or kit for this event.')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not start voice input.')
       updatePhase('idle')
@@ -181,6 +185,11 @@ export function PackingAssistantButton({ event = null }) {
       }
 
       if (eventsMode) {
+        if (pendingDeleteRef.current.length > 0) {
+          handleDeleteConfirmation(transcript)
+          updatePhase('idle')
+          return
+        }
         await handleEventsRequest(transcript)
         updatePhase('idle')
         return
@@ -313,6 +322,39 @@ export function PackingAssistantButton({ event = null }) {
     }
   }
 
+  const handleDeleteConfirmation = (transcript) => {
+    const confirmation = parseDeleteConfirmation(transcript)
+    const pending = pendingDeleteRef.current[0]
+    if (confirmation === null) {
+      const question = `Please say yes or no: should I delete ${pending.title}?`
+      setMessage(question)
+      if (speech.supported) speech.speak(question)
+      return
+    }
+
+    pendingDeleteRef.current.shift()
+    let response
+    if (confirmation) {
+      const eventStillExists = stateRef.current.events.some((eventItem) => eventItem.id === pending.id)
+      if (eventStillExists) {
+        actions.removeEvent(pending.id)
+        response = `Deleted ${pending.title}.`
+        actions.announce(response)
+      } else {
+        response = `${pending.title} is no longer in your events, so I didn't delete anything.`
+      }
+    } else {
+      response = `Kept ${pending.title}.`
+    }
+
+    const next = pendingDeleteRef.current[0]
+    const message = next
+      ? `${response} Should I also delete ${next.title}? Say yes or no.`
+      : response
+    setMessage(message)
+    if (speech.supported) speech.speak(message)
+  }
+
   /** Events page: turn the request into new events and/or items on existing ones. */
   const handleEventsRequest = async (transcript) => {
     const current = stateRef.current
@@ -321,7 +363,13 @@ export function PackingAssistantButton({ event = null }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         transcript,
-        events: current.events.slice(0, 50).map(({ title, startsAt }) => ({ title, startsAt })),
+        events: current.events.slice(0, 50).map((eventItem) => ({
+          title: eventItem.title,
+          startsAt: eventItem.startsAt,
+          kits: eventItem.categories
+            .filter((category) => category.kitId)
+            .map(({ name, kitId }) => ({ id: kitId, name })),
+        })),
         kits: current.kits.slice(0, 50).map((kit) => kit.name),
         now: new Date().toISOString(),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -332,9 +380,112 @@ export function PackingAssistantButton({ event = null }) {
       throw new Error(result.error || 'Gemini could not interpret that request.')
     }
 
-    const { reply, clarification, events: newEvents, additions } = result.assistant
+    const {
+      reply,
+      clarification,
+      events: newEvents,
+      additions,
+      newKits,
+      kitAssignments,
+      deletions,
+      kitRemovals,
+    } = result.assistant
     const changes = []
     const latest = stateRef.current
+    const createdKits = []
+    const requestedKitAssignments = [
+      ...kitAssignments,
+      ...findExplicitKitAssignments(transcript, latest.events, latest.kits),
+    ]
+    const appliedKitIds = new Set()
+
+    for (const removal of kitRemovals) {
+      const eventMatches = latest.events.filter(
+        (ev) => ev.title.trim().toLowerCase() === removal.eventTitle.trim().toLowerCase(),
+      )
+      if (eventMatches.length !== 1) {
+        changes.push(eventMatches.length
+          ? `I found more than one event called ${removal.eventTitle}, so I didn't remove a kit.`
+          : `I couldn't find an event called ${removal.eventTitle}.`)
+        continue
+      }
+
+      const target = eventMatches[0]
+      for (const spokenKit of removal.kits) {
+        const categoryMatches = target.categories.filter(
+          (category) =>
+            category.kitId
+            && normalizeKitName(category.name) === normalizeKitName(spokenKit),
+        )
+        if (categoryMatches.length !== 1) {
+          changes.push(categoryMatches.length
+            ? `I found more than one ${spokenKit} kit on ${target.title}, so I didn't remove either one.`
+            : `I couldn't find a ${spokenKit} kit on ${target.title}.`)
+          continue
+        }
+
+        actions.removeCategory(target.id, categoryMatches[0].id)
+        changes.push(`Removed the ${categoryMatches[0].name} kit from ${target.title}. Your saved kit is unchanged.`)
+      }
+    }
+
+    for (const assignment of requestedKitAssignments) {
+      const eventMatches = latest.events.filter(
+        (ev) => ev.title.trim().toLowerCase() === assignment.eventTitle.trim().toLowerCase(),
+      )
+      if (eventMatches.length !== 1) {
+        changes.push(eventMatches.length
+          ? `I found more than one event called ${assignment.eventTitle}, so I didn't add the kit.`
+          : `I couldn't find an event called ${assignment.eventTitle}.`)
+        continue
+      }
+
+      const target = eventMatches[0]
+      for (const spokenKit of assignment.kits) {
+        const kitMatches = latest.kits.filter(
+          (kit) => normalizeKitName(kit.name) === normalizeKitName(spokenKit),
+        )
+        if (kitMatches.length !== 1) {
+          changes.push(kitMatches.length
+            ? `I found more than one kit called ${spokenKit}.`
+            : `I couldn't find a saved kit called ${spokenKit}.`)
+          continue
+        }
+
+        const kit = kitMatches[0]
+        const assignmentKey = `${target.id}:${kit.id}`
+        if (appliedKitIds.has(assignmentKey)) continue
+        appliedKitIds.add(assignmentKey)
+        if (target.categories.some((category) => category.kitId === kit.id)) {
+          changes.push(`${kit.name} is already on ${target.title}.`)
+          continue
+        }
+
+        actions.applyKit(target.id, kit)
+        changes.push(`Added the ${kit.name} kit to ${target.title}.`)
+      }
+    }
+
+    for (const spoken of newKits) {
+      const name = capitalizeFirst(spoken.name)
+      const key = normalizeKitName(name)
+      const existingKit = [...latest.kits, ...createdKits].find(
+        (kit) => normalizeKitName(kit.name) === key,
+      )
+      if (existingKit) {
+        changes.push(`Using your saved ${existingKit.name} kit.`)
+        continue
+      }
+
+      const kit = {
+        id: uid('kit'),
+        name,
+        items: spoken.items.map((item) => ({ name: capitalizeFirst(item), note: '' })),
+      }
+      actions.saveKit(kit.id, kit.name, kit.items)
+      createdKits.push(kit)
+      changes.push(`Created the ${name} kit${kit.items.length ? ` with ${kit.items.map((item) => item.name).join(', ')}` : ''}.`)
+    }
 
     // Items for events that already exist go into their first list.
     for (const addition of additions) {
@@ -363,8 +514,9 @@ export function PackingAssistantButton({ event = null }) {
 
     // New events. Each opens like a normal new event, with the usual reminders.
     for (const spoken of newEvents) {
-      const kits = latest.kits.filter((kit) =>
-        spoken.kits.some((name) => name.trim().toLowerCase() === kit.name.trim().toLowerCase()))
+      const requestedKitNames = spoken.kits.map(normalizeKitName)
+      const kits = [...latest.kits, ...createdKits].filter((kit) =>
+        requestedKitNames.includes(normalizeKitName(kit.name)))
       const items = spoken.items.map(capitalizeFirst)
       const stamp = Date.now()
       actions.addEvent({
@@ -386,6 +538,27 @@ export function PackingAssistantButton({ event = null }) {
         + (spoken.time ? ` at ${when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : ', all day')
       const bring = [...items, ...kits.map((kit) => `the ${kit.name} kit`)]
       changes.push(`Added ${capitalizeFirst(spoken.title)} on ${whenText}${bring.length ? `, bringing ${bring.join(', ')}` : ''}.`)
+    }
+
+    const requestedDeletes = []
+    for (const title of deletions) {
+      const matches = latest.events.filter(
+        (eventItem) => eventItem.title.trim().toLowerCase() === title.trim().toLowerCase(),
+      )
+      if (matches.length !== 1) {
+        changes.push(matches.length
+          ? `I found more than one event called ${title}, so I won't delete either one.`
+          : `I couldn't find an event called ${title}.`)
+        continue
+      }
+      if (!requestedDeletes.some((item) => item.id === matches[0].id)) {
+        requestedDeletes.push({ id: matches[0].id, title: matches[0].title })
+      }
+    }
+
+    if (requestedDeletes.length) {
+      pendingDeleteRef.current = requestedDeletes
+      changes.push(`Should I delete ${requestedDeletes[0].title}? Say yes or no.`)
     }
 
     const summary = [reply, ...changes, clarification].filter(Boolean).join(' ')

@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   hasAssistantEndPhrase,
+  findExplicitKitAssignments,
+  normalizeKitName,
+  parseDeleteConfirmation,
   removeAssistantEndPhrase,
   resolvePackingActions
 } from "../src/packing-assistant.js";
@@ -15,6 +18,56 @@ test("recognizes and removes the explicit I'm done end phrase", () => {
     "Pack the reference letter."
   );
   assert.equal(removeAssistantEndPhrase("I'm done"), "");
+});
+
+test("parses explicit event deletion confirmations and rejects unclear answers", () => {
+  assert.equal(parseDeleteConfirmation("Yes, I'm done."), true);
+  assert.equal(parseDeleteConfirmation("Go ahead"), true);
+  assert.equal(parseDeleteConfirmation("No, I'm done."), false);
+  assert.equal(parseDeleteConfirmation("Keep it"), false);
+  assert.equal(parseDeleteConfirmation("Maybe later"), null);
+});
+
+test("finds explicitly requested saved kits and their existing events from the transcript", () => {
+  const events = [
+    { title: "Doctor's appointment" },
+    { title: "Beach day" }
+  ];
+  const kits = [{ name: "Documents" }, { name: "Travel" }];
+
+  assert.deepEqual(
+    findExplicitKitAssignments(
+      "Add my saved document kit to doctor's appointment.",
+      events,
+      kits,
+    ),
+    [{ eventTitle: "Doctor's appointment", kits: ["Documents"] }],
+  );
+  assert.equal(normalizeKitName("Saved document kit"), normalizeKitName("Documents"));
+  assert.deepEqual(
+    findExplicitKitAssignments(
+      "Add my saved document kit to doctor's appointment. I'm I'm done.",
+      events,
+      kits,
+    ),
+    [{ eventTitle: "Doctor's appointment", kits: ["Documents"] }],
+  );
+  assert.deepEqual(
+    findExplicitKitAssignments(
+      "Do not add my Documents kit to doctor's appointment.",
+      events,
+      kits,
+    ),
+    [],
+  );
+  assert.deepEqual(
+    findExplicitKitAssignments(
+      "Create a new document kit.",
+      events,
+      kits,
+    ),
+    [],
+  );
 });
 
 test("resolves unambiguous packing actions with simple singular/plural variations", () => {
