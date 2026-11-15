@@ -14,10 +14,11 @@ import { Icon } from './Icon.jsx'
 import { useStore } from '../state/store.jsx'
 import {
   selectSortedEvents, selectProgress, selectNextEvent, eventTone,
-  formatEventTimeOf, formatRelativeOf,
+  formatEventTimeOf, formatRelativeOf, dayKey,
 } from '../state/selectors.js'
 import { suggestKits } from '../state/suggestKits.js'
 import { TimeSelect, ALL_DAY, timeOf } from './TimeSelect.jsx'
+import { DatePicker } from './DatePicker.jsx'
 import './Views.css'
 
 /** "2026-11-20" in the user's own timezone (not UTC). */
@@ -40,6 +41,7 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
   const [time, setTime] = useState(event ? (event.allDay ? ALL_DAY : timeOf(event.startsAt)) : '09:00')
   const [location, setLocation] = useState(event?.location || '')
   const formId = event?.id || 'new'
+  const [dateMissing, setDateMissing] = useState(false)
   // Kits chosen here are copied into the new event as ready-made lists.
   const [kitIds, setKitIds] = useState([])
     // Kits that fit this title go first and get a "Suggested" label
@@ -49,7 +51,8 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
 
   const submit = (e) => {
     e.preventDefault()
-    if (!title.trim() || !date) return
+    if (!title.trim()) return
+    if (!date) { setDateMissing(true); actions.announce('Please choose a date'); return }
     // Build a local-time ISO string. `new Date('2026-11-20T10:00')` without a
     // Z suffix is parsed in the user's own timezone, which is what we want.
     // All-day events start at midnight and show "All day" instead of a time.
@@ -95,11 +98,13 @@ export function EventForm({ onDone, initialDate = '', event = null }) {
       </label>
 
       <div className="eventform__grid">
-        <label className="field">
-          <span>Date</span>
-          <input className="input" type="date" value={date}
-                 onChange={(e) => setDate(e.target.value)} required />
-        </label>
+        <div className="field">
+          <span id={`date-label-${formId}`}>Date</span>
+          <DatePicker labelId={`date-label-${formId}`} value={date}
+                      onChange={(d) => { setDate(d); setDateMissing(false) }}
+                      markedDays={state.events.map((ev) => dayKey(ev.startsAt))} />
+          {dateMissing ? <p className="field__error">Please choose a date.</p> : null}
+        </div>
         <div className="field">
           <span id={`time-label-${formId}`}>Time</span>
           <TimeSelect labelId={`time-label-${formId}`} value={time} onChange={setTime} />

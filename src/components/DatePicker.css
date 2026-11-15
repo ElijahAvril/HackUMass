@@ -1,0 +1,68 @@
+/* ===========================================================================
+   DATE PICKER - same rounded button as Dropdown, with a soft month card
+   =========================================================================== */
+/* The calendar bubble doesn't spin like the dropdown arrow. */
+.datepicker .dropdown__chevron,
+.datepicker.is-open .dropdown__chevron { transform: none; }
+
+.datepicker__card {
+  position: absolute; z-index: 40; left: 0; top: calc(100% + 8px);
+  width: 320px; max-width: calc(100vw - 32px);
+  padding: 14px;
+  background: var(--card);
+  border: 1.5px solid var(--card-edge); border-radius: 20px;
+  box-shadow: 0 14px 34px -10px rgba(60, 40, 20, .35), 0 2px 6px rgba(60, 40, 20, .08);
+  animation: dropdown-in .14s ease-out;
+}
+.datepicker__card--up { top: auto; bottom: calc(100% + 8px); }
+
+.datepicker__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.datepicker__title { margin: 0; font-size: var(--fs-md); font-weight: 700; color: var(--ink); }
+.datepicker__nav {
+  display: grid; place-items: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  border: none; background: var(--tone-3); color: var(--ink); cursor: pointer;
+}
+.datepicker__nav:hover { background: #EED48F; }
+
+.datepicker__grid { width: 100%; border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
+.datepicker__grid th {
+  padding: 4px 0 6px; font-size: var(--fs-xs); font-weight: 700;
+  color: var(--ink-soft); text-align: center;
+}
+.datepicker__grid td { padding: 0; text-align: center; }
+
+.datepicker__day {
+  position: relative;
+  width: 100%; max-width: 40px; aspect-ratio: 1; margin: 0 auto;
+  display: grid; place-items: center;
+  border: none; border-radius: 50%;
+  background: transparent; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); font-weight: 500;
+  cursor: pointer;
+}
+.datepicker__day:hover { background: var(--tone-5); }
+.datepicker__day.is-outside { color: var(--ink-soft); opacity: .5; }
+/* Today: a ring. Selected: a filled yellow circle, bold. Both can show. */
+.datepicker__day.is-today { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 700; }
+.datepicker__day.is-selected { background: var(--tone-3); font-weight: 700; opacity: 1; }
+.datepicker__day.is-selected:hover { background: #EED48F; }
+.datepicker__day:focus-visible { outline: 3px solid var(--focus, #1D4ED8); outline-offset: 1px; }
+
+/* A tiny dot under days that already have an event. */
+.datepicker__dot {
+  position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: #C2554D;
+}
+
+.datepicker__foot { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1.5px dashed var(--card-edge); }
+.datepicker__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; min-height: 36px;
+  border: 1.5px solid var(--card-edge); border-radius: 999px;
+  background: #FFF; color: var(--ink);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+}
+.datepicker__chip:hover { background: var(--tone-2); border-color: var(--ink-soft); }
+
+.field__error { margin: 4px 0 0; font-size: var(--fs-sm); font-weight: 600; color: #A33A33; }
