@@ -27,7 +27,9 @@ import { Icon } from './components/Icon.jsx'
 import { useStore } from './state/store.jsx'
 import { useReminders } from './hooks/useReminders.js'
 import { useSpeech } from './hooks/useSpeech.js'
-import { selectNextEvent, selectProgress } from './state/selectors.js'
+import {
+  formatEventDate, formatEventTime, selectEventsOnDay, selectNextEvent, selectProgress,
+} from './state/selectors.js'
 import './styles/global.css'
 
 export default function App() {
@@ -43,6 +45,7 @@ export default function App() {
   const nextEvent = selectNextEvent(state.events)
   const openEvent =
     state.events.find((e) => e.id === state.ui.openEventId) || nextEvent
+  const sameDayEvents = selectEventsOnDay(state.events, openEvent)
   const packingEvent = state.events.find((e) => e.id === state.ui.packingEventId)
 
   const handleReminder = useCallback((event, reminder, body) => {
@@ -94,7 +97,42 @@ export default function App() {
       case 'next':
       default:
         return openEvent
-          ? <EventView event={openEvent} />
+          ? (
+            <>
+              {sameDayEvents.length > 1 ? (
+                <details className="card nextday" open>
+                  <summary className="nextday__summary">
+                    <strong>{formatEventDate(openEvent.startsAt)} · {sameDayEvents.length} events</strong>
+                    <span>Show events on this day</span>
+                  </summary>
+                  <ul className="dayevents">
+                    {sameDayEvents.map((event) => {
+                      const progress = selectProgress(event)
+                      const selected = event.id === openEvent.id
+                      return (
+                        <li key={event.id}>
+                          <button
+                            type="button"
+                            className="dayevents__btn"
+                            aria-current={selected ? 'true' : undefined}
+                            onClick={() => actions.openEvent(event.id)}
+                          >
+                            <strong>{event.title}{selected ? ' · Currently open' : ''}</strong>
+                            <span>
+                              {formatEventTime(event.startsAt)}
+                              {event.location ? ` · ${event.location}` : ''}
+                              {` · ${progress.packed} of ${progress.total} packed`}
+                            </span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </details>
+              ) : null}
+              <EventView event={openEvent} />
+            </>
+          )
           : <EmptyState />
     }
   }

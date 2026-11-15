@@ -27,6 +27,15 @@ export function selectSortedEvents(events) {
   return [...events].sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))
 }
 
+/** Events scheduled on the same local calendar day, sorted by start time. */
+export function selectEventsOnDay(events, referenceEvent) {
+  if (!referenceEvent) return []
+  const referenceDay = dayKey(referenceEvent.startsAt)
+  return selectSortedEvents(events).filter(
+    (event) => dayKey(event.startsAt) === referenceDay,
+  )
+}
+
 /** { packed, total, percent, remaining } across every category of an event. */
 export function selectProgress(event) {
   if (!event) return { packed: 0, total: 0, percent: 0, remaining: 0 }
