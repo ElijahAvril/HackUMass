@@ -12,6 +12,47 @@ import { useStore } from '../state/store.jsx'
 import { selectSortedEvents } from '../state/selectors.js'
 import './Views.css'
 
+/** Small form to add one item to a saved kit. */
+function KitItemForm({ kit }) {
+  const { actions } = useStore()
+  const [name, setName] = useState('')
+  const [note, setNote] = useState('')
+
+  const submit = (e) => {
+    e.preventDefault()
+    const clean = name.trim()
+    if (!clean) return
+    if (kit.items.some((i) => i.name.trim().toLowerCase() === clean.toLowerCase())) {
+      actions.announce(`${clean} is already in ${kit.name}`)
+      return
+    }
+    actions.editKit(kit.id, [...kit.items, { name: clean, note: note.trim() }])
+    actions.announce(`${clean} added to ${kit.name}`)
+    setName('')
+    setNote('')
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <div className="row">
+        <label className="field">
+          <span>Add an item to {kit.name}</span>
+          <input className="input" value={name} placeholder="Water bottle"
+                 onChange={(e) => setName(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Where it's kept (optional)</span>
+          <input className="input" value={note} placeholder="Kitchen counter"
+                 onChange={(e) => setNote(e.target.value)} />
+        </label>
+        <button type="submit" className="btn btn--primary" disabled={!name.trim()}>
+          <Icon name="plus" size={18} /> Add
+        </button>
+      </div>
+    </form>
+  )
+}
+
 export function KitsTab() {
   const { state, actions } = useStore()
   const [newKit, setNewKit] = useState('')
@@ -66,18 +107,32 @@ export function KitsTab() {
             {kit.items.length ? (
               <ul className="kit__items">
                 {kit.items.map((item, i) => (
-                  <li key={`${kit.id}-${i}`}>
-                    <strong>{item.name}</strong>
-                    {item.note ? <span className="item__note"> — {item.note}</span> : null}
+                  <li key={`${kit.id}-${i}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ flex: 1 }}>
+                      <strong>{item.name}</strong>
+                      {item.note ? <span className="item__note"> — {item.note}</span> : null}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--danger"
+                      onClick={() => {
+                        actions.editKit(kit.id, kit.items.filter((_, index) => index !== i))
+                        actions.announce(`${item.name} removed from ${kit.name}`)
+                      }}
+                    >
+                      <Icon name="trash" size={16} /> Remove<span className="sr-only"> {item.name}</span>
+                    </button>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="panel__empty">
-                Empty for now. Build this list inside an event, then press
-                “Save these back to the kit”.
+                Empty for now. Add your first item below.                “Save these back to the kit”.
               </p>
             )}
+
+            <KitItemForm kit={kit} />
 
             <div className="kit__actions">
               {events.length ? (
@@ -108,8 +163,7 @@ export function KitsTab() {
                 type="button"
                 className="btn btn--ghost btn--danger"
                 onClick={() => {
-                  if (window.confirm(`Delete the "${kit.name}" kit?`)) {
-                    actions.removeKit(kit.id)
+                  if (window.confirm(`Delete the "${kit.name}" kit? This is permanent and can't be undone. Lists already added to events will stay.`)) {                    actions.removeKit(kit.id)
                     actions.announce(`${kit.name} kit deleted`)
                   }
                 }}

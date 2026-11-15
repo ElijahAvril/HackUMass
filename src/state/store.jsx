@@ -231,6 +231,42 @@ function reducer(state, action) {
       }
     }
 
+        // Edits a saved kit from the My kits tab, and passes the change on to
+    // upcoming events that use it. Items added inside an event are kept.
+    case 'EDIT_KIT': {
+      const oldKit = state.kits.find((k) => k.id === action.kitId)
+      if (!oldKit) return state
+      const key = (name) => name.trim().toLowerCase()
+      const oldNames = oldKit.items.map((i) => key(i.name))
+      const newNames = action.items.map((i) => key(i.name))
+      const added = action.items.filter((i) => !oldNames.includes(key(i.name)))
+      const removed = oldNames.filter((n) => !newNames.includes(n))
+      const now = Date.now()
+      return {
+        ...state,
+        kits: state.kits.map((k) => (k.id === action.kitId ? { ...k, items: action.items } : k)),
+        events: state.events.map((e) => {
+          if (new Date(e.startsAt).getTime() < now) return e // past events stay as a record
+          return {
+            ...e,
+            categories: e.categories.map((c) => {
+              if (c.kitId !== action.kitId) return c
+              const have = c.items.map((i) => key(i.name))
+              return {
+                ...c,
+                items: [
+                  ...c.items.filter((i) => !removed.includes(key(i.name))),
+                  ...added
+                    .filter((i) => !have.includes(key(i.name)))
+                    .map((i) => ({ id: uid('it'), name: i.name, note: i.note || '', packed: false, flagged: false })),
+                ],
+              }
+            }),
+          }
+        }),
+      }
+    }
+
     case 'REMOVE_KIT':
       return { ...state, kits: state.kits.filter((k) => k.id !== action.kitId) }
 
@@ -337,6 +373,7 @@ export function StoreProvider({ children }) {
 
     saveKit: (kitId, name, items) => dispatch({ type: 'SAVE_KIT', kitId, name, items }),
     removeKit: (kitId) => dispatch({ type: 'REMOVE_KIT', kitId }),
+        editKit: (kitId, items) => dispatch({ type: 'EDIT_KIT', kitId, items }),
 
     setSetting: (key, value) => dispatch({ type: 'SET_SETTING', key, value }),
     announce: (message) => dispatch({ type: 'ANNOUNCE', message }),
