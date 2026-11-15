@@ -205,7 +205,10 @@ export function PackingAssistantButton({ event }) {
         } else if (operation.type === 'add_reminder') {
           actions.addReminder(latestEvent.id, operation.offsetMinutes)
         } else if (operation.type === 'update_event') {
-          actions.updateEvent(latestEvent.id, { [operation.field]: operation.value })
+          actions.updateEvent(latestEvent.id, {
+            [operation.field]: operation.value,
+            ...(operation.field === 'startsAt' ? { isAllDay: false } : {}),
+          })
         } else if (operation.type === 'add_item') {
           actions.addItem(
             latestEvent.id,

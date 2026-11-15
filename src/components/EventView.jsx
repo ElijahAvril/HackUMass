@@ -30,13 +30,13 @@ export function EventHeader({ event, compact = false }) {
         <span className="evhead__chunk">
           <Icon name="clock" size={16} />
           <span className="evhead__mono">
-            {formatEventDate(event.startsAt)} · {formatEventTime(event.startsAt)}
+            {formatEventDate(event.startsAt)} · {formatEventTime(event.startsAt, event.isAllDay)}
           </span>
         </span>
         {event.location ? (
           <span className="evhead__chunk"><Icon name="pin" size={16} />{event.location}</span>
         ) : null}
-        <span className="evhead__rel">{formatRelative(event.startsAt)}</span>
+        <span className="evhead__rel">{formatRelative(event.startsAt, event.isAllDay)}</span>
       </p>
     </div>
   )

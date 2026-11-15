@@ -100,7 +100,7 @@ export function CalendarTab() {
                   <span className="cal__num" aria-hidden="true">{i + 1}</span>
                   {dayEvents.slice(0, 2).map((e) => (
                     <span key={e.id} className="cal__chip" style={{ background: eventTone(e, state.events) }} aria-hidden="true">
-                      {formatEventTime(e.startsAt).replace(':00', '')} {e.title}
+                      {formatEventTime(e.startsAt, e.isAllDay).replace(':00', '')} {e.title}
                     </span>
                   ))}
                   {dayEvents.length > 2 ? <span className="cal__more" aria-hidden="true">+{dayEvents.length - 2} more</span> : null}
@@ -135,7 +135,7 @@ export function CalendarTab() {
                       onClick={() => actions.openEvent(e.id)}
                     >
                       <strong>{e.title}</strong>
-                      <span>{formatEventTime(e.startsAt)} · {p.packed} of {p.total} packed</span>
+                      <span>{formatEventTime(e.startsAt, e.isAllDay)} · {p.packed} of {p.total} packed</span>
                     </button>
                   </li>
                 )

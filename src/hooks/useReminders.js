@@ -31,7 +31,9 @@ export function useReminders(events, enabled, onFire) {
     const now = Date.now()
 
     events.forEach((event) => {
-      const eventTime = new Date(event.startsAt).getTime()
+      const eventDate = new Date(event.startsAt)
+      if (event.isAllDay) eventDate.setHours(9, 0, 0, 0)
+      const eventTime = eventDate.getTime()
 
       event.reminders.forEach((reminder) => {
         if (reminder.fired) return

@@ -42,7 +42,7 @@ export function RemindersCard({ event }) {
       ) : (
         <ul className="reminders">
           {sorted.map((reminder) => {
-            const { label, when } = describeReminder(reminder, event.startsAt)
+            const { label, when } = describeReminder(reminder, event.startsAt, event.isAllDay)
             return (
               <li key={reminder.id} className="reminders__row">
                 <Icon name="bell" size={18} />

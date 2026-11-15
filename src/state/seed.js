@@ -16,7 +16,7 @@ export const uid = (prefix = 'id') =>
  * DATA SHAPE (read this before editing anything else)
  * ---------------------------------------------------
  * event = {
- *   id, title, startsAt (ISO string), location,
+ *   id, title, startsAt (ISO string), isAllDay, location,
  *   reminders: [{ id, offsetMinutes, fired }],
  *   categories: [ category ]
  * }

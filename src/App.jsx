@@ -119,7 +119,7 @@ export default function App() {
                           >
                             <strong>{event.title}{selected ? ' · Currently open' : ''}</strong>
                             <span>
-                              {formatEventTime(event.startsAt)}
+                              {formatEventTime(event.startsAt, event.isAllDay)}
                               {event.location ? ` · ${event.location}` : ''}
                               {` · ${progress.packed} of ${progress.total} packed`}
                             </span>

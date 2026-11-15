@@ -17,14 +17,24 @@
  */
 export function selectNextEvent(events) {
   const now = Date.now()
+  const today = dayKey(new Date(now))
   return [...events]
-    .filter((e) => new Date(e.startsAt).getTime() >= now - 2 * 60 * 60 * 1000) // 2h grace
-    .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))[0]
+    .filter((event) => event.isAllDay
+      ? dayKey(event.startsAt) >= today
+      : new Date(event.startsAt).getTime() >= now - 2 * 60 * 60 * 1000) // 2h grace
+    .sort(compareEvents)[0]
 }
 
 /** All events, soonest first. Used by the Events tab. */
 export function selectSortedEvents(events) {
-  return [...events].sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))
+  return [...events].sort(compareEvents)
+}
+
+function compareEvents(a, b) {
+  const dayDifference = dayKey(a.startsAt).localeCompare(dayKey(b.startsAt))
+  if (dayDifference !== 0) return dayDifference
+  if (Boolean(a.isAllDay) !== Boolean(b.isAllDay)) return a.isAllDay ? -1 : 1
+  return new Date(a.startsAt) - new Date(b.startsAt)
 }
 
 /** Events scheduled on the same local calendar day, sorted by start time. */
@@ -100,11 +110,23 @@ export const formatEventDate = (iso) =>
     weekday: 'long', month: 'short', day: 'numeric',
   })
 
-export const formatEventTime = (iso) =>
-  new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+export const formatEventTime = (iso, isAllDay = false) =>
+  isAllDay ? 'All day' : new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 
 /** "in 6 days" / "tomorrow" / "today" - friendlier than a raw date. */
-export function formatRelative(iso) {
+export function formatRelative(iso, isAllDay = false) {
+  if (isAllDay) {
+    const date = new Date(iso)
+    const today = new Date()
+    const eventDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    const todayDay = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
+    const diffDays = Math.round((eventDay - todayDay) / 86400000)
+    if (diffDays < 0) return 'happening now'
+    if (diffDays === 0) return 'today'
+    if (diffDays === 1) return 'tomorrow'
+    if (diffDays < 7) return `in ${diffDays} days`
+    return `in ${Math.round(diffDays / 7)} week${diffDays >= 14 ? 's' : ''}`
+  }
   const diffMs = new Date(iso).getTime() - Date.now()
   const diffDays = Math.round(diffMs / 86400000)
   if (diffMs < 0) return 'happening now'
@@ -115,13 +137,15 @@ export function formatRelative(iso) {
 }
 
 /** Turns a reminder offset into both a label and the clock time it will fire. */
-export function describeReminder(reminder, eventIso) {
+export function describeReminder(reminder, eventIso, isAllDay = false) {
   const mins = reminder.offsetMinutes
   const label =
     mins >= 1440 ? `${Math.round(mins / 1440)} day${mins >= 2880 ? 's' : ''} before`
     : mins >= 60 ? `${Math.round(mins / 60)} hour${mins >= 120 ? 's' : ''} before`
     : `${mins} minutes before`
-  const at = new Date(new Date(eventIso).getTime() - mins * 60000)
+  const eventDate = new Date(eventIso)
+  if (isAllDay) eventDate.setHours(9, 0, 0, 0)
+  const at = new Date(eventDate.getTime() - mins * 60000)
   return {
     label,
     when: at.toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' }),

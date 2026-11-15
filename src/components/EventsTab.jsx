@@ -25,6 +25,7 @@ function EventForm({ onDone, initialDate = '' }) {
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(initialDate)
   const [time, setTime] = useState('09:00')
+  const [allDay, setAllDay] = useState(false)
   const [location, setLocation] = useState('')
   // Kits chosen here are copied into the new event as ready-made lists.
   const [kitIds, setKitIds] = useState([])
@@ -36,12 +37,12 @@ function EventForm({ onDone, initialDate = '' }) {
   const submit = (e) => {
     e.preventDefault()
     if (!title.trim() || !date) return
-    // Build a local-time ISO string. `new Date('2026-11-20T10:00')` without a
-    // Z suffix is parsed in the user's own timezone, which is what we want.
-    const startsAt = new Date(`${date}T${time || '09:00'}`).toISOString()
+    // Keep the selected local date stable when converting it to the stored ISO time.
+    const startsAt = new Date(`${date}T${allDay ? '00:00' : time || '09:00'}`).toISOString()
     actions.addEvent({
       title: title.trim(),
       startsAt,
+      isAllDay: allDay,
       location: location.trim(),
       reminders: [
         { id: `rem_${Date.now()}_a`, offsetMinutes: 1440, fired: false },
@@ -69,11 +70,18 @@ function EventForm({ onDone, initialDate = '' }) {
           <input className="input" type="date" value={date}
                  onChange={(e) => setDate(e.target.value)} required />
         </label>
-        <label className="field">
-          <span>Time</span>
-          <input className="input" type="time" value={time}
-                 onChange={(e) => setTime(e.target.value)} />
-        </label>
+        <div className="eventform__time">
+          <label className="field">
+            <span>Time</span>
+            <input className="input" type="time" value={time} disabled={allDay}
+                   onChange={(e) => setTime(e.target.value)} />
+          </label>
+          <label className="eventform__all-day">
+            <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
+            <span>All day</span>
+          </label>
+          {allDay ? <span className="eventform__all-day-note">Reminders use 9 AM as the reference time.</span> : null}
+        </div>
       </div>
 
       <label className="field">
@@ -190,7 +198,7 @@ export function EventsTab() {
                   <div className="agrow__main">
                     <h3 className="agrow__title">{event.title}</h3>
                     <p className="agrow__meta">
-                      <span><Icon name="clock" size={15} /> {formatEventTime(event.startsAt)} · {formatRelative(event.startsAt)}</span>
+                      <span><Icon name="clock" size={15} /> {formatEventTime(event.startsAt, event.isAllDay)} · {formatRelative(event.startsAt, event.isAllDay)}</span>
                       {event.location ? <span><Icon name="pin" size={15} /> {event.location}</span> : null}
                     </p>
                     <p className="agrow__progress">
@@ -232,10 +240,10 @@ export function EventsTab() {
       {next ? (
         <aside className="card panel nextup" aria-labelledby="nextup-heading">
           <span className="tape tape--right" aria-hidden="true" />
-          <p className="eyebrow">Next up · {formatRelative(next.startsAt)}</p>
+          <p className="eyebrow">Next up · {formatRelative(next.startsAt, next.isAllDay)}</p>
           <h2 className="nextup__title" id="nextup-heading">{next.title}</h2>
           <p className="nextup__when">
-            {new Date(next.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatEventTime(next.startsAt)}
+            {new Date(next.startsAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {formatEventTime(next.startsAt, next.isAllDay)}
           </p>
           <p className="progress__headline">
             <strong className="progress__big">{nextProgress.packed}</strong>

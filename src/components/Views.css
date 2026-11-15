@@ -88,6 +88,11 @@
 /* ---- Event form ---------------------------------------------------------- */
 .eventform { display: flex; flex-direction: column; gap: var(--sp-3); }
 .eventform__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.eventform__time { display: flex; align-items: end; gap: var(--sp-3); }
+.eventform__time .field { flex: 1; min-width: 0; }
+.eventform__all-day { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: var(--target-min); font-weight: 700; cursor: pointer; }
+.eventform__all-day input { width: 20px; height: 20px; accent-color: var(--ink); }
+.eventform__all-day-note { font-size: var(--fs-xs); color: var(--ink-soft); }
 .eventform__kits { border: 1px dashed var(--rule); border-radius: var(--radius-sm); padding: var(--sp-3); }
 .eventform__kits legend { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-soft); padding: 0 var(--sp-2); }
 .eventform__kit { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--target-min); cursor: pointer; }
