@@ -6,7 +6,7 @@
 // Keeping those two shapes separate is what stops last week's ticks leaking
 // into next week's interview.
 // ---------------------------------------------------------------------------
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Icon } from './Icon.jsx'
 import { Dropdown } from './Dropdown.jsx'
 import { useStore } from '../state/store.jsx'
@@ -57,7 +57,14 @@ function KitItemForm({ kit }) {
 export function KitsTab() {
   const { state, actions } = useStore()
   const [newKit, setNewKit] = useState('')
+  const [kitNotice, setKitNotice] = useState('')
   const events = selectSortedEvents(state.events)
+
+  useEffect(() => {
+    if (!kitNotice) return undefined
+    const timeout = setTimeout(() => setKitNotice(''), 3000)
+    return () => clearTimeout(timeout)
+  }, [kitNotice])
 
   return (
     <div className="stack">
@@ -145,9 +152,25 @@ export function KitsTab() {
                     options={events.map((event) => ({ value: event.id, label: event.title, icon: 'calendar' }))}
                     onChange={(eventId) => {
                       const event = state.events.find((ev) => ev.id === eventId)
+                      if (!event) return
+
+                      const alreadyAdded = event.categories.some(
+                        (category) => category.kitId === kit.id,
+                      )
+                      if (
+                        alreadyAdded
+                        && !window.confirm(`"${kit.name}" is already on "${event.title}". Add it again?`)
+                      ) {
+                        return
+                      }
+
                       // One dispatch builds the category AND its items.
                       actions.applyKit(eventId, kit)
-                      actions.announce(`${kit.name} added to ${event?.title || 'the event'}`)
+                      const notice = alreadyAdded
+                        ? `${kit.name} added again to ${event.title}`
+                        : `${kit.name} added to ${event.title}`
+                      setKitNotice(notice)
+                      actions.announce(notice)
                     }}
                   />
                 </div>
@@ -168,6 +191,7 @@ export function KitsTab() {
           </section>
         ))
       )}
+      {kitNotice ? <div className="kit-toast" role="status" aria-live="polite">{kitNotice}</div> : null}
     </div>
   )
 }
