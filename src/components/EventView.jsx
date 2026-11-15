@@ -12,6 +12,7 @@ import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
 import { CategoryCard } from './CategoryCard.jsx'
 import { PackingAssistantButton } from './PackingAssistantButton.jsx'
+import { EventForm } from './EventsTab.jsx'
 import { useStore } from '../state/store.jsx'
 import { useSpeech } from '../hooks/useSpeech.js'
 import {
@@ -71,6 +72,7 @@ export function EventView({ event }) {
   const speech = useSpeech()
   const [addingList, setAddingList] = useState(false)
   const [listName, setListName] = useState('')
+  const [editingEvent, setEditingEvent] = useState(false)
 
   const flagged = selectFlaggedItems(event)
   const remaining = selectRemainingItems(event)
@@ -112,12 +114,20 @@ export function EventView({ event }) {
               {speech.speaking ? 'Stop reading' : 'Read list aloud'}
             </button>
           ) : null}
+          <button type="button" className="btn" onClick={() => setEditingEvent((v) => !v)}
+                  aria-expanded={editingEvent}>
+            <Icon name="pencil" size={18} /> Edit event
+          </button>
           <PackingAssistantButton event={event} />
           <button type="button" className="btn" onClick={() => actions.setTab('events')}>
             <Icon name="calendar" size={18} /> All events
           </button>
         </div>
       </header>
+
+      {editingEvent ? (
+        <EventForm key={event.id} event={event} onDone={() => setEditingEvent(false)} />
+      ) : null}
 
       <PriorityBanner
         items={flagged}

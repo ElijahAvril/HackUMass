@@ -8,6 +8,7 @@
 // ---------------------------------------------------------------------------
 import React, { useState } from 'react'
 import { Icon } from './Icon.jsx'
+import { Dropdown } from './Dropdown.jsx'
 import { useStore } from '../state/store.jsx'
 import { describeReminder } from '../state/selectors.js'
 import { requestNotificationPermission } from '../hooks/useReminders.js'
@@ -73,26 +74,20 @@ export function RemindersCard({ event }) {
 
       {editing ? (
         <div className="reminders__add">
-          <label className="field">
-            <span>Add a reminder</span>
-            <select
-              className="select"
-              defaultValue=""
-              onChange={(e) => {
-                if (!e.target.value) return
-                const minutes = Number(e.target.value)
+          <div className="field">
+            <span id={`rem-add-${event.id}`}>Add a reminder</span>
+            <Dropdown
+              labelId={`rem-add-${event.id}`}
+              value=""
+              placeholder="Choose a time…"
+              options={PRESETS.map((preset) => ({ value: preset.minutes, label: preset.label, icon: 'bell' }))}
+              onChange={(minutes) => {
                 actions.addReminder(event.id, minutes)
                 const preset = PRESETS.find((p) => p.minutes === minutes)
                 actions.announce(`${preset?.label || 'Reminder'} added`)
-                e.target.value = ''
               }}
-            >
-              <option value="" disabled>Choose a time…</option>
-              {PRESETS.map((preset) => (
-                <option key={preset.minutes} value={preset.minutes}>{preset.label}</option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
         </div>
       ) : null}
 

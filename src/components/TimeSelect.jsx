@@ -9,6 +9,7 @@
 // Value is "HH:MM" (24-hour, like the old input) or ALL_DAY.
 // ---------------------------------------------------------------------------
 import React, { useMemo } from 'react'
+import { Dropdown } from './Dropdown.jsx'
 
 export const ALL_DAY = 'all-day'
 
@@ -17,24 +18,39 @@ const label = (hhmm) => {
   const [h, m] = hhmm.split(':').map(Number)
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
+/** A gentle word for each part of the day, shown on the hour. */
+const partOfDay = (hhmm) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  if (m !== 0) return undefined
+  if (h === 12) return 'noon'
+  if (h === 0) return 'midnight'
+  if (h >= 5 && h < 12) return 'morning'
+  if (h > 12 && h < 17) return 'afternoon'
+  if (h >= 17 && h < 21) return 'evening'
+  return 'night'
+}
 
 /** Every 15 minutes, midnight to 11:45 PM. */
 const QUARTER_HOURS = Array.from({ length: 96 }, (_, i) => `${pad(Math.floor(i / 4))}:${pad((i % 4) * 15)}`)
 
-export function TimeSelect({ id, value, onChange }) {
-  // If an event was set to, say, 9:10, keep that exact time in the list.
-  const times = useMemo(
-    () => (value && value !== ALL_DAY && !QUARTER_HOURS.includes(value)
-      ? [...QUARTER_HOURS, value].sort()
-      : QUARTER_HOURS),
-    [value],
-  )
+/** Turn an ISO start time back into the form's "HH:MM" (local time). */
+export const timeOf = (iso) => {
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
-  return (
-    <select id={id} className="select timeselect" value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value={ALL_DAY}>All day</option>
-      <option disabled>──────────</option>
-      {times.map((t) => <option key={t} value={t}>{label(t)}</option>)}
-    </select>
-  )
+export function TimeSelect({ labelId, value, onChange }) {
+  // If an event was set to, say, 9:10, keep that exact time in the list.
+  const options = useMemo(() => {
+    const times = value && value !== ALL_DAY && !QUARTER_HOURS.includes(value)
+      ? [...QUARTER_HOURS, value].sort()
+      : QUARTER_HOURS
+    return [
+      { value: ALL_DAY, label: 'All day', icon: 'sun', hint: 'no set time' },
+      { divider: true },
+      ...times.map((t) => ({ value: t, label: label(t), hint: partOfDay(t) })),
+    ]
+  }, [value])
+
+  return <Dropdown labelId={labelId} ariaLabel="Time" value={value} onChange={onChange} options={options} />
 }
